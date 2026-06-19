@@ -6,6 +6,7 @@ import {
   readFile,
   readdir,
   rename,
+  rm,
   rmdir,
   stat,
   unlink,
@@ -43,6 +44,20 @@ function isEEXIST(error) {
 
 function isNotEmptyError(error) {
   return error && typeof error === 'object' && error.code === 'ENOTEMPTY';
+}
+
+function isPositiveInteger(value) {
+  return Number.isInteger(value) && value > 0;
+}
+
+function processAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if (error && typeof error === 'object' && error.code === 'ESRCH') return false;
+    return true;
+  }
 }
 
 function isHistoryShape(value) {
@@ -116,8 +131,11 @@ function normalizeLockOptions(lockOptions = {}) {
     mkdirImpl: lockOptions.mkdirImpl ?? mkdir,
     readdirImpl: lockOptions.readdirImpl ?? readdir,
     rmdirImpl: lockOptions.rmdirImpl ?? rmdir,
+    renameImpl: lockOptions.renameImpl ?? rename,
+    rmImpl: lockOptions.rmImpl ?? rm,
     statImpl: lockOptions.statImpl ?? stat,
     utimesImpl: lockOptions.utimesImpl ?? utimes,
+    processAliveImpl: lockOptions.processAliveImpl ?? processAlive,
     nowImpl: lockOptions.nowImpl ?? (() => new Date()),
   };
 }
@@ -149,37 +167,96 @@ async function unlinkIfExists(filePath, unlinkImpl) {
 async function readLockState(lockDirectory, fsOps) {
   try {
     const entries = await fsOps.readdirImpl(lockDirectory);
-    if (entries.length !== 1 || !entries[0].endsWith('.json')) {
-      const stats = await fsOps.statImpl(lockDirectory);
-      return { ownerToken: null, leasePath: null, mtimeMs: stats.mtimeMs };
+    const directoryStats = await fsOps.statImpl(lockDirectory);
+    let mtimeMs = directoryStats.mtimeMs;
+    const validLeases = [];
+
+    for (const entry of entries) {
+      const leasePath = path.join(lockDirectory, entry);
+      const stats = await fsOps.statImpl(leasePath);
+      mtimeMs = Math.max(mtimeMs, stats.mtimeMs);
+
+      try {
+        const parsed = JSON.parse(await fsOps.readFileImpl(leasePath, 'utf8'));
+        if (
+          parsed
+          && typeof parsed === 'object'
+          && typeof parsed.ownerToken === 'string'
+          && parsed.ownerToken.length > 0
+          && isPositiveInteger(parsed.pid)
+        ) {
+          validLeases.push({
+            ownerToken: parsed.ownerToken,
+            pid: parsed.pid,
+            leasePath,
+            mtimeMs: stats.mtimeMs,
+          });
+        }
+      } catch {
+        // A partial lease is handled as malformed once it is stale.
+      }
     }
 
-    const leasePath = path.join(lockDirectory, entries[0]);
-    const [raw, stats] = await Promise.all([
-      fsOps.readFileImpl(leasePath, 'utf8'),
-      fsOps.statImpl(leasePath),
-    ]);
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object' || typeof parsed.ownerToken !== 'string') {
-      return { ownerToken: null, leasePath: null, mtimeMs: stats.mtimeMs };
+    if (
+      entries.length === 1
+      && validLeases.length === 1
+      && entries[0] === `${validLeases[0].ownerToken}.json`
+    ) {
+      return { kind: 'lease', ...validLeases[0] };
     }
-    return { ownerToken: parsed.ownerToken, leasePath, mtimeMs: stats.mtimeMs };
+
+    return {
+      kind: 'malformed',
+      mtimeMs,
+      validPids: [...new Set(validLeases.map((lease) => lease.pid))],
+    };
   } catch (error) {
     if (isMissingError(error)) return null;
     return null;
   }
 }
 
-function startHeartbeat(leasePath, ownerToken, fsOps) {
+function sameLease(left, right) {
+  return Boolean(
+    left
+    && right
+    && left.kind === 'lease'
+    && right.kind === 'lease'
+    && left.ownerToken === right.ownerToken
+    && left.pid === right.pid
+    && left.leasePath === right.leasePath
+  );
+}
+
+function startHeartbeat(lockDirectory, leasePath, ownerToken, pid, fsOps) {
   let stopped = false;
+  let compromised = false;
   let inFlight = null;
   let timer;
 
   const stopTimer = () => {
     if (stopped) return false;
     stopped = true;
-    fsOps.clearIntervalImpl(timer);
+    if (timer) fsOps.clearIntervalImpl(timer);
     return true;
+  };
+
+  const markCompromised = () => {
+    compromised = true;
+    stopTimer();
+  };
+
+  const checkOwnership = async () => {
+    const state = await readLockState(lockDirectory, fsOps);
+    const owned = Boolean(
+      state
+      && state.kind === 'lease'
+      && state.ownerToken === ownerToken
+      && state.pid === pid
+      && state.leasePath === leasePath
+    );
+    if (!owned) markCompromised();
+    return owned;
   };
 
   const tick = async () => {
@@ -188,15 +265,11 @@ function startHeartbeat(leasePath, ownerToken, fsOps) {
 
     inFlight = (async () => {
       try {
-        const parsed = JSON.parse(await fsOps.readFileImpl(leasePath, 'utf8'));
-        if (!parsed || parsed.ownerToken !== ownerToken) {
-          stopTimer();
-          return;
-        }
+        if (!await checkOwnership()) return;
         const now = lockNow(fsOps);
         await fsOps.utimesImpl(leasePath, now, now);
       } catch {
-        stopTimer();
+        markCompromised();
       } finally {
         inFlight = null;
       }
@@ -208,11 +281,25 @@ function startHeartbeat(leasePath, ownerToken, fsOps) {
   timer = fsOps.setIntervalImpl(tick, fsOps.heartbeatMs);
   timer.unref?.();
   return {
+    async assertOwned() {
+      if (inFlight) await inFlight;
+      if (compromised || !await checkOwnership()) {
+        throw syncFailed('风格历史锁所有权已丢失');
+      }
+    },
     async stop() {
       stopTimer();
       if (inFlight) await inFlight;
     },
   };
+}
+
+async function processIsAlive(fsOps, pid) {
+  try {
+    return await fsOps.processAliveImpl(pid) !== false;
+  } catch {
+    return true;
+  }
 }
 
 async function removeLockDirectoryIfEmpty(lockDirectory, fsOps) {
@@ -226,20 +313,70 @@ async function removeLockDirectoryIfEmpty(lockDirectory, fsOps) {
 }
 
 async function removeObservedLease(lockDirectory, observed, fsOps) {
+  if (!isPositiveInteger(observed.pid) || await processIsAlive(fsOps, observed.pid)) {
+    return false;
+  }
+
   const confirmed = await readLockState(lockDirectory, fsOps);
   if (
-    !confirmed
-    || !confirmed.leasePath
-    || confirmed.ownerToken !== observed.ownerToken
-    || confirmed.leasePath !== observed.leasePath
+    !sameLease(confirmed, observed)
     || lockNow(fsOps).getTime() - confirmed.mtimeMs <= fsOps.staleMs
+    || await processIsAlive(fsOps, confirmed.pid)
   ) {
     return false;
   }
 
-  const removed = await unlinkIfExists(confirmed.leasePath, fsOps.unlinkImpl);
+  const finalState = await readLockState(lockDirectory, fsOps);
+  if (
+    !sameLease(finalState, confirmed)
+    || lockNow(fsOps).getTime() - finalState.mtimeMs <= fsOps.staleMs
+  ) {
+    return false;
+  }
+
+  const removed = await unlinkIfExists(finalState.leasePath, fsOps.unlinkImpl);
   if (!removed) return false;
   await removeLockDirectoryIfEmpty(lockDirectory, fsOps);
+  return true;
+}
+
+async function hasLiveRecordedProcess(state, fsOps) {
+  for (const pid of state.validPids ?? []) {
+    if (await processIsAlive(fsOps, pid)) return true;
+  }
+  return false;
+}
+
+async function quarantineMalformedLock(lockDirectory, observed, fsOps) {
+  if (observed.kind !== 'malformed' || await hasLiveRecordedProcess(observed, fsOps)) {
+    return false;
+  }
+
+  const confirmed = await readLockState(lockDirectory, fsOps);
+  if (
+    !confirmed
+    || confirmed.kind !== 'malformed'
+    || lockNow(fsOps).getTime() - confirmed.mtimeMs <= fsOps.staleMs
+    || await hasLiveRecordedProcess(confirmed, fsOps)
+  ) {
+    return false;
+  }
+
+  const quarantinePath = `${lockDirectory}.quarantine.${randomUUID()}`;
+  try {
+    await fsOps.renameImpl(lockDirectory, quarantinePath);
+  } catch (error) {
+    if (isMissingError(error) || isEEXIST(error)) return false;
+    throw error;
+  }
+
+  const quarantined = await readLockState(quarantinePath, fsOps);
+  if (quarantined && await hasLiveRecordedProcess(quarantined, fsOps)) {
+    await fsOps.renameImpl(quarantinePath, lockDirectory).catch(() => {});
+    return false;
+  }
+
+  await fsOps.rmImpl(quarantinePath, { force: true, recursive: true });
   return true;
 }
 
@@ -247,6 +384,7 @@ async function acquireStyleHistoryLock(rootDir, lockOptions) {
   const fsOps = normalizeLockOptions(lockOptions);
   const lockDirectory = lockPath(rootDir);
   const ownerToken = randomUUID();
+  const pid = process.pid;
   const leasePath = path.join(lockDirectory, `${ownerToken}.json`);
   const deadline = lockNow(fsOps).getTime() + fsOps.timeoutMs;
 
@@ -255,13 +393,14 @@ async function acquireStyleHistoryLock(rootDir, lockOptions) {
       await fsOps.mkdirImpl(lockDirectory);
       const createdAt = lockNow(fsOps).toISOString();
       try {
-        await fsOps.writeFileImpl(leasePath, JSON.stringify({ ownerToken, createdAt }), { flag: 'wx' });
+        await fsOps.writeFileImpl(leasePath, JSON.stringify({ ownerToken, pid, createdAt }), { flag: 'wx' });
       } catch (error) {
+        await removeIfExists(leasePath, fsOps.unlinkImpl).catch(() => {});
         await removeLockDirectoryIfEmpty(lockDirectory, fsOps).catch(() => {});
         throw error;
       }
 
-      const heartbeat = startHeartbeat(leasePath, ownerToken, fsOps);
+      const heartbeat = startHeartbeat(lockDirectory, leasePath, ownerToken, pid, fsOps);
       let released = false;
       const release = async () => {
         if (released) return;
@@ -274,7 +413,7 @@ async function acquireStyleHistoryLock(rootDir, lockOptions) {
           // Best effort; stale recovery can clean up if needed.
         }
       };
-      return { ownerToken, release };
+      return { assertOwned: heartbeat.assertOwned, ownerToken, pid, release };
     } catch (error) {
       if (!isEEXIST(error)) {
         throw syncFailed('风格历史锁获取失败');
@@ -284,9 +423,9 @@ async function acquireStyleHistoryLock(rootDir, lockOptions) {
     const observed = await readLockState(lockDirectory, fsOps);
     if (observed && lockNow(fsOps).getTime() - observed.mtimeMs > fsOps.staleMs) {
       try {
-        if (observed.ownerToken && observed.leasePath) {
+        if (observed.kind === 'lease') {
           if (await removeObservedLease(lockDirectory, observed, fsOps)) continue;
-        } else if (await removeLockDirectoryIfEmpty(lockDirectory, fsOps)) {
+        } else if (await quarantineMalformedLock(lockDirectory, observed, fsOps)) {
           continue;
         }
       } catch {
@@ -408,6 +547,7 @@ export async function syncStylePreview({
         }
       }
 
+      await lock.assertOwned();
       await renameImpl(tempPreviewPath, finalPreviewPath);
       finalInstalled = true;
 
@@ -421,6 +561,7 @@ export async function syncStylePreview({
       const nextHistory = { ...history, [safeStyleId]: record };
 
       await writeFile(tempHistoryPath, `${JSON.stringify(nextHistory, null, 2)}\n`);
+      await lock.assertOwned();
       await renameImpl(tempHistoryPath, historyFilePath);
       historyCommitted = true;
 

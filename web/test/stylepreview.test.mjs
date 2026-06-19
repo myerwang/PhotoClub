@@ -8,6 +8,7 @@ import {
   readdir,
   readFile,
   rename,
+  rm,
   rmdir,
   stat,
   unlink,
@@ -102,13 +103,16 @@ function createLockTiming() {
     get timerCount() {
       return timers.size;
     },
+    get nowMs() {
+      return nowMs;
+    },
     get unrefCount() {
       return unrefCount;
     },
   };
 }
 
-async function replaceLockOwner(rootDir, ownerToken) {
+async function replaceLockOwner(rootDir, ownerToken, pid = process.pid) {
   const lockFilePath = path.join(rootDir, '.control', 'style-history.lock');
   const lockStats = await stat(lockFilePath);
 
@@ -119,14 +123,20 @@ async function replaceLockOwner(rootDir, ownerToken) {
     await mkdir(lockFilePath);
     await writeFile(
       path.join(lockFilePath, `${ownerToken}.json`),
-      JSON.stringify({ ownerToken }),
+      JSON.stringify({ ownerToken, pid }),
       { flag: 'wx' },
     );
     return;
   }
 
   await unlink(lockFilePath);
-  await writeFile(lockFilePath, JSON.stringify({ ownerToken }), { flag: 'wx' });
+  await writeFile(lockFilePath, JSON.stringify({ ownerToken, pid }), { flag: 'wx' });
+}
+
+async function readLockLease(rootDir) {
+  const lockDirectory = path.join(rootDir, '.control', 'style-history.lock');
+  const [entry] = await readdir(lockDirectory);
+  return JSON.parse(await readFile(path.join(lockDirectory, entry), 'utf8'));
 }
 
 async function readLockOwner(rootDir) {
@@ -213,6 +223,26 @@ test('syncStylePreview uses the last output path and preserves existing history'
   const history = await readStyleHistory(rootDir);
   assert.deepEqual(history.other, existingRecord);
   assert.deepEqual(history.sticker, record);
+});
+
+test('syncStylePreview stores the local process pid in its lease', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  let lease;
+
+  await syncStylePreview({
+    rootDir,
+    styleId: 'sticker',
+    outputPaths: [sourcePath],
+    jobId: 'job-1',
+    resizeImpl: async (_sourcePath, targetPath) => {
+      lease = await readLockLease(rootDir);
+      await writeFile(targetPath, 'preview');
+    },
+  });
+
+  assert.equal(lease.pid, process.pid);
+  assert.equal(typeof lease.ownerToken, 'string');
 });
 
 test('syncStylePreview rejects unsafe ids and empty inputs', async () => {
@@ -315,6 +345,95 @@ test('syncStylePreview keeps the old preview readable until resize completes', a
 
   assert.deepEqual(events, ['resize', 'backup', 'install', 'commit']);
   assert.equal(await readFile(previewPath, 'utf8'), 'new-preview');
+});
+
+test('syncStylePreview rejects ownership loss before installing the final preview', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const previewPath = path.join(rootDir, 'styles', 'previews', 'sticker.jpg');
+  await mkdir(path.dirname(previewPath), { recursive: true });
+  await writeFile(previewPath, 'old-preview');
+
+  let caught;
+  try {
+    await syncStylePreview({
+      rootDir,
+      styleId: 'sticker',
+      outputPaths: [sourcePath],
+      jobId: 'job-1',
+      resizeImpl: async (_sourcePath, targetPath) => {
+        await writeFile(targetPath, 'new-preview');
+        await replaceLockOwner(rootDir, 'replacement-before-install');
+      },
+    });
+  } catch (error) {
+    caught = error;
+  }
+
+  try {
+    assert.ok(caught instanceof AppError);
+    assert.equal(caught.code, 'STYLE_PREVIEW_SYNC_FAILED');
+    assert.equal(await readFile(previewPath, 'utf8'), 'old-preview');
+    assert.deepEqual(await readStyleHistory(rootDir), {});
+    assert.deepEqual(await readdir(path.dirname(previewPath)), ['sticker.jpg']);
+    assert.equal(await readLockOwner(rootDir), 'replacement-before-install');
+  } finally {
+    await removeLock(rootDir);
+  }
+});
+
+test('syncStylePreview rejects ownership loss before history commit and rolls back', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const previewPath = path.join(rootDir, 'styles', 'previews', 'sticker.jpg');
+  const historyPath = path.join(rootDir, '.control', 'style-history.json');
+  const oldRecord = {
+    styleId: 'sticker',
+    generatedAt: '2026-06-19T11:00:00.000Z',
+    jobId: 'job-old',
+    sourcePath: '/gone/old.png',
+    preview: 'styles/previews/sticker.jpg',
+  };
+  let historyCommits = 0;
+  await mkdir(path.dirname(previewPath), { recursive: true });
+  await mkdir(path.dirname(historyPath), { recursive: true });
+  await writeFile(previewPath, 'old-preview');
+  await writeFile(historyPath, JSON.stringify({ sticker: oldRecord }));
+
+  let caught;
+  try {
+    await syncStylePreview({
+      rootDir,
+      styleId: 'sticker',
+      outputPaths: [sourcePath],
+      jobId: 'job-1',
+      resizeImpl: async (_sourcePath, targetPath) => {
+        await writeFile(targetPath, 'new-preview');
+      },
+      renameImpl: async (from, to) => {
+        await rename(from, to);
+        if (to === previewPath) {
+          await replaceLockOwner(rootDir, 'replacement-before-commit');
+        } else if (to === historyPath) {
+          historyCommits += 1;
+        }
+      },
+    });
+  } catch (error) {
+    caught = error;
+  }
+
+  try {
+    assert.ok(caught instanceof AppError);
+    assert.equal(caught.code, 'STYLE_PREVIEW_SYNC_FAILED');
+    assert.equal(historyCommits, 0);
+    assert.equal(await readFile(previewPath, 'utf8'), 'old-preview');
+    assert.deepEqual(await readStyleHistory(rootDir), { sticker: oldRecord });
+    assert.deepEqual(await readdir(path.dirname(previewPath)), ['sticker.jpg']);
+    assert.equal(await readLockOwner(rootDir), 'replacement-before-commit');
+  } finally {
+    await removeLock(rootDir);
+  }
 });
 
 test('syncStylePreview restores the previous preview when history commit fails', async () => {
@@ -556,6 +675,7 @@ test('syncStylePreview stale takeover cannot remove a changed owner', async () =
   const thirdCanFinish = deferred();
   let secondStarted = false;
   let removalBlocked = false;
+  let deadProcessChecks = 0;
 
   const first = syncStylePreview({
     rootDir,
@@ -583,6 +703,11 @@ test('syncStylePreview stale takeover cannot remove a changed owner', async () =
         ...await stat(targetPath),
         mtimeMs: 0,
       }),
+      processAliveImpl: async (pid) => {
+        assert.equal(pid, process.pid);
+        deadProcessChecks += 1;
+        return false;
+      },
       unlinkImpl: async (targetPath) => {
         if (!removalBlocked && targetPath.includes('style-history.lock')) {
           removalBlocked = true;
@@ -634,6 +759,86 @@ test('syncStylePreview stale takeover cannot remove a changed owner', async () =
   assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
   assert.equal(timing.timerCount, 0);
   assert.equal(timing.unrefCount, 3);
+  assert.ok(deadProcessChecks >= 1);
+});
+
+test('syncStylePreview live pid prevents stale removal after a heartbeat refresh', async () => {
+  const rootDir = await createRoot();
+  const firstSource = await writeOutput(rootDir, 'first.png', 'first');
+  const secondSource = await writeOutput(rootDir, 'second.png', 'second');
+  const timing = createLockTiming();
+  const firstStarted = deferred();
+  const firstCanFinish = deferred();
+  const secondCanFinish = deferred();
+  let secondStarted = false;
+  let refreshed = false;
+  let liveChecks = 0;
+
+  const refreshActiveLease = async () => {
+    if (refreshed) return;
+    refreshed = true;
+    await timing.heartbeatAll();
+  };
+
+  const first = syncStylePreview({
+    rootDir,
+    styleId: 'alpha',
+    outputPaths: [firstSource],
+    jobId: 'job-a',
+    lockOptions: timing.options,
+    resizeImpl: async (_sourcePath, targetPath) => {
+      firstStarted.resolve();
+      await writeFile(targetPath, 'alpha');
+      await firstCanFinish.promise;
+    },
+  });
+  await firstStarted.promise;
+  timing.advance(40);
+
+  const second = syncStylePreview({
+    rootDir,
+    styleId: 'beta',
+    outputPaths: [secondSource],
+    jobId: 'job-b',
+    lockOptions: {
+      ...timing.options,
+      processAliveImpl: async (pid) => {
+        assert.equal(pid, process.pid);
+        liveChecks += 1;
+        if (liveChecks === 1) return false;
+        await refreshActiveLease();
+        return true;
+      },
+      unlinkImpl: async (targetPath) => {
+        if (targetPath.includes('style-history.lock')) await refreshActiveLease();
+        await unlink(targetPath);
+      },
+    },
+    resizeImpl: async (_sourcePath, targetPath) => {
+      secondStarted = true;
+      await writeFile(targetPath, 'beta');
+      await secondCanFinish.promise;
+    },
+  });
+
+  await waitFor(
+    () => refreshed && (secondStarted || timing.pendingSleeps > 0),
+    'contender did not evaluate the refreshed stale lease',
+  );
+  const overlapped = secondStarted;
+
+  firstCanFinish.resolve();
+  await first;
+  if (!secondStarted) timing.releaseNextSleep();
+  await waitFor(() => secondStarted, 'second writer did not acquire after release');
+  secondCanFinish.resolve();
+  await second;
+
+  assert.equal(overlapped, false);
+  assert.ok(liveChecks >= 2);
+  assert.deepEqual(Object.keys(await readStyleHistory(rootDir)).sort(), ['alpha', 'beta']);
+  assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
+  assert.equal(timing.timerCount, 0);
 });
 
 test('syncStylePreview keeps a long-running lock alive while later writers wait', async () => {
@@ -716,6 +921,130 @@ test('syncStylePreview keeps a long-running lock alive while later writers wait'
   assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
   assert.equal(timing.timerCount, 0);
   assert.equal(timing.unrefCount, 3);
+});
+
+test('syncStylePreview quarantines and recovers a stale partially written lock', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.png', 'source');
+  const lockDirectory = path.join(rootDir, '.control', 'style-history.lock');
+  const timing = createLockTiming();
+  let quarantinePath;
+  let removedQuarantine;
+  await mkdir(lockDirectory, { recursive: true });
+  await writeFile(path.join(lockDirectory, 'partial.json'), '{"ownerToken":');
+
+  const record = await syncStylePreview({
+    rootDir,
+    styleId: 'sticker',
+    outputPaths: [sourcePath],
+    jobId: 'job-1',
+    lockOptions: {
+      ...timing.options,
+      timeoutMs: 0,
+      statImpl: async (targetPath) => ({
+        ...await stat(targetPath),
+        mtimeMs: 0,
+      }),
+      renameImpl: async (from, to) => {
+        assert.equal(from, lockDirectory);
+        quarantinePath = to;
+        assert.equal(path.dirname(to), path.dirname(lockDirectory));
+        assert.match(path.basename(to), /^style-history\.lock\.quarantine\./u);
+        await rename(from, to);
+      },
+      rmImpl: async (targetPath, options) => {
+        removedQuarantine = targetPath;
+        assert.deepEqual(options, { force: true, recursive: true });
+        await rm(targetPath, options);
+      },
+    },
+    resizeImpl: async (_sourcePath, targetPath) => {
+      await writeFile(targetPath, 'preview');
+    },
+  });
+
+  assert.equal(record.styleId, 'sticker');
+  assert.equal(removedQuarantine, quarantinePath);
+  assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
+  assert.equal(timing.timerCount, 0);
+});
+
+test('syncStylePreview quarantines a stale malformed lock with unexpected entries', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.png', 'source');
+  const lockDirectory = path.join(rootDir, '.control', 'style-history.lock');
+  const timing = createLockTiming();
+  let quarantineCount = 0;
+  await mkdir(lockDirectory, { recursive: true });
+  await writeFile(path.join(lockDirectory, 'one.json'), 'not-json');
+  await writeFile(path.join(lockDirectory, 'unexpected.tmp'), 'partial');
+
+  await syncStylePreview({
+    rootDir,
+    styleId: 'sticker',
+    outputPaths: [sourcePath],
+    jobId: 'job-1',
+    lockOptions: {
+      ...timing.options,
+      timeoutMs: 0,
+      statImpl: async (targetPath) => ({
+        ...await stat(targetPath),
+        mtimeMs: 0,
+      }),
+      renameImpl: async (from, to) => {
+        quarantineCount += 1;
+        await rename(from, to);
+      },
+      rmImpl: rm,
+    },
+    resizeImpl: async (_sourcePath, targetPath) => {
+      await writeFile(targetPath, 'preview');
+    },
+  });
+
+  assert.equal(quarantineCount, 1);
+  assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
+  assert.equal(timing.timerCount, 0);
+});
+
+test('syncStylePreview never quarantines a fresh partially written lock', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.png', 'source');
+  const lockDirectory = path.join(rootDir, '.control', 'style-history.lock');
+  const timing = createLockTiming();
+  let quarantineCount = 0;
+  await mkdir(lockDirectory, { recursive: true });
+  await writeFile(path.join(lockDirectory, 'partial.json'), '{"ownerToken":');
+
+  await expectAppErrorCode(
+    syncStylePreview({
+      rootDir,
+      styleId: 'sticker',
+      outputPaths: [sourcePath],
+      jobId: 'job-1',
+      lockOptions: {
+        ...timing.options,
+        timeoutMs: 0,
+        statImpl: async (targetPath) => ({
+          ...await stat(targetPath),
+          mtimeMs: timing.nowMs,
+        }),
+        renameImpl: async (from, to) => {
+          quarantineCount += 1;
+          await rename(from, to);
+        },
+        rmImpl: rm,
+      },
+      resizeImpl: async () => {
+        throw new Error('fresh lock must not be acquired');
+      },
+    }),
+    'STYLE_PREVIEW_SYNC_FAILED',
+  );
+
+  assert.equal(quarantineCount, 0);
+  assert.deepEqual(await readdir(lockDirectory), ['partial.json']);
+  await removeLock(rootDir);
 });
 
 test('syncStylePreview bounds lock retries using injected timing', async () => {
