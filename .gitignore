@@ -1,0 +1,14 @@
+.DS_Store
+.superpowers/
+
+input/*
+!input/README.md
+
+output/*
+!output/README.md
+
+.control/
+hold/
+
+profiles/*
+!profiles/README.md

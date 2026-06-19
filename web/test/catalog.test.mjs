@@ -1,0 +1,105 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
+import {
+  assertSafeId,
+  loadCatalog,
+  parseOutputFormats,
+  parseStyleFrontmatter,
+} from '../lib/catalog.mjs';
+
+async function fixture() {
+  const root = await mkdtemp(path.join(tmpdir(), 'photo-catalog-'));
+  await mkdir(path.join(root, 'profiles', 'mama'), { recursive: true });
+  await mkdir(path.join(root, 'profiles', 'empty'), { recursive: true });
+  await mkdir(path.join(root, 'input', 'mama'), { recursive: true });
+  await mkdir(path.join(root, 'input', 'baby'), { recursive: true });
+  await mkdir(path.join(root, 'styles'), { recursive: true });
+  await mkdir(path.join(root, 'system', 'rules'), { recursive: true });
+  await writeFile(path.join(root, 'profiles', 'mama', 'multiview_reference.png'), 'png');
+  await writeFile(path.join(root, 'styles', 'sticker.png'), 'png');
+  await writeFile(path.join(root, 'styles', 'sticker.md'), `---\nstyle_id: sticker\nname: 贴纸\nthumbnail: sticker.png\n---\n# Sticker\n`);
+  await writeFile(path.join(root, 'system', 'rules', 'output_formats.md'), `
+### \`jp_711_photo_l_1051x1500\`
+- Status: active
+- Label: 7-Eleven L
+- Pixel size: \`1051 x 1500\`
+
+### \`disabled_1x1\`
+- Status: disabled
+- Label: Disabled
+- Pixel size: \`1 x 1\`
+`);
+  return root;
+}
+
+test('lists only profiles with readable multiview files', async () => {
+  const catalog = await loadCatalog(await fixture());
+  assert.deepEqual(catalog.profiles, [{
+    id: 'mama',
+    imageUrl: '/media/profiles/mama/multiview_reference.png',
+  }]);
+});
+
+test('lists direct input directories for profile generation', async () => {
+  const catalog = await loadCatalog(await fixture());
+  assert.deepEqual(catalog.inputs, [{ id: 'baby' }, { id: 'mama' }]);
+});
+
+test('parses style_id name and thumbnail from YAML frontmatter', () => {
+  const style = parseStyleFrontmatter(`---\nstyle_id: sticker\nname: 贴纸\nthumbnail: sticker.png\n---\n`, 'sticker.md');
+  assert.deepEqual(style, { id: 'sticker', name: '贴纸', thumbnail: 'sticker.png' });
+});
+
+test('rejects a style with missing thumbnail file', async () => {
+  const root = await fixture();
+  await writeFile(path.join(root, 'styles', 'broken.md'), `---\nstyle_id: broken\nname: 损坏风格\nthumbnail: missing.png\n---\n`);
+  const catalog = await loadCatalog(root);
+  assert.deepEqual(catalog.styles, [{
+    id: 'sticker',
+    name: '贴纸',
+    thumbnailUrl: '/media/styles/sticker.png',
+  }]);
+  assert.equal(catalog.issues[0].code, 'STYLE_THUMBNAIL_MISSING');
+  assert.equal(catalog.issues[0].details.styleId, 'broken');
+});
+
+test('parses registered output formats and exact dimensions', () => {
+  const formats = parseOutputFormats(`
+### \`jp_711_photo_l_1051x1500\`
+- Status: active
+- Label: 7-Eleven L
+- Pixel size: \`1051 x 1500\`
+### \`jp_711_photo_2l_1500x2102\`
+- Status: active
+- Label: 7-Eleven 2L
+- Pixel size: \`1500 x 2102\`
+`);
+  assert.deepEqual(formats, [
+    { id: 'jp_711_photo_l_1051x1500', label: '7-Eleven L', width: 1051, height: 1500 },
+    { id: 'jp_711_photo_2l_1500x2102', label: '7-Eleven 2L', width: 1500, height: 2102 },
+  ]);
+});
+
+test('loadCatalog returns active styles and formats', async () => {
+  const catalog = await loadCatalog(await fixture());
+  assert.deepEqual(catalog.styles, [{
+    id: 'sticker',
+    name: '贴纸',
+    thumbnailUrl: '/media/styles/sticker.png',
+  }]);
+  assert.deepEqual(catalog.formats, [{
+    id: 'jp_711_photo_l_1051x1500',
+    label: '7-Eleven L',
+    width: 1051,
+    height: 1500,
+  }]);
+});
+
+test('rejects path traversal identifiers', () => {
+  assert.throws(() => assertSafeId('../mama', '人物'), /人物标识无效/);
+  assert.equal(assertSafeId('角色1', '人物'), '角色1');
+});

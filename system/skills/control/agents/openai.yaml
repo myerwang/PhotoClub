@@ -1,0 +1,4 @@
+interface:
+  display_name: "同框照相馆"
+  short_description: "启动、释放或停止本地照片生成控制页面及其后台任务"
+  default_prompt: "使用 $control 启动同框照相馆并用系统默认浏览器打开。"
