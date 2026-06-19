@@ -57,7 +57,8 @@ main > section + section, .operation-column { border-left: 1px solid var(--line)
 .choice:has(input:checked)::after { content: "✓"; position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--accent); font-size: 12px; font-weight: 700; }
 .choice-footer { min-height: 27px; display: flex; align-items: center; justify-content: space-between; gap: 3px; padding-left: 4px; border-top: 1px solid #d3d9d7; }
 .choice-footer .choice-name { min-width: 0; padding: 3px 1px; }
-.profile-delete { flex: 0 0 auto; align-self: stretch; min-height: 26px; padding: 0 5px; border: 0; border-left: 1px solid #d3d9d7; border-radius: 0; background: #edf0ef; color: #7d292e; font-size: 10px; }
+.profile-delete { flex: 0 0 28px; align-self: stretch; min-height: 26px; padding: 0; display: grid; place-items: center; border: 0; border-left: 1px solid #d3d9d7; border-radius: 0; background: #edf0ef; color: #7d292e; }
+.profile-delete svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 .profile-delete:hover:not(:disabled) { background: var(--accent); color: #fff; }
 .choice input { position: absolute; opacity: 0; pointer-events: none; }
 .profile-media { aspect-ratio: 3 / 2; }

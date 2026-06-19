@@ -60,6 +60,15 @@ function renderLock() {
   $('shutdown').disabled = state.lease !== 'owned';
 }
 
+function trashIcon() {
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  icon.setAttribute('viewBox', '0 0 24 24');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.setAttribute('focusable', 'false');
+  icon.innerHTML = '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/>';
+  return icon;
+}
+
 function choice(kind, item, checked, mediaClass, imageUrl, label) {
   const element = document.createElement('label');
   element.className = 'choice';
@@ -85,7 +94,7 @@ function choice(kind, item, checked, mediaClass, imageUrl, label) {
   const wrapper = document.createElement('div'); wrapper.className = 'choice-wrap';
   const footer = document.createElement('div'); footer.className = 'choice-footer';
   const remove = document.createElement('button');
-  remove.type = 'button'; remove.className = 'profile-delete'; remove.textContent = t('button.delete');
+  remove.type = 'button'; remove.className = 'profile-delete'; remove.append(trashIcon());
   remove.title = t('aria.deleteProfile', { name: item.id }); remove.setAttribute('aria-label', remove.title);
   remove.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); deleteProfile(item.id); });
   footer.append(name, remove);
