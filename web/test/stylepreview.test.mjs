@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { constants } from 'node:fs';
-import { copyFile, mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, mkdtemp, mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -143,7 +143,105 @@ test('syncStylePreview leaves no success history behind when resize fails', asyn
   );
 
   assert.deepEqual(await readStyleHistory(rootDir), {});
-  await assert.rejects(readFile(path.join(rootDir, 'styles', 'previews', 'sticker.jpg'), 'utf8'));
+  const previewDir = path.join(rootDir, 'styles', 'previews');
+  const controlDir = path.join(rootDir, '.control');
+  assert.deepEqual(await readdir(previewDir), []);
+  assert.deepEqual(await readdir(controlDir), []);
+});
+
+test('syncStylePreview restores the previous preview when history commit fails', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const previewPath = path.join(rootDir, 'styles', 'previews', 'sticker.jpg');
+  const historyPath = path.join(rootDir, '.control', 'style-history.json');
+  await mkdir(path.dirname(previewPath), { recursive: true });
+  await mkdir(path.dirname(historyPath), { recursive: true });
+  await writeFile(previewPath, 'old-preview');
+  const existingHistory = {
+    sticker: {
+      styleId: 'sticker',
+      generatedAt: '2026-06-19T11:00:00.000Z',
+      jobId: 'job-old',
+      sourcePath: '/gone/old.png',
+      preview: 'styles/previews/sticker.jpg',
+    },
+  };
+  await writeFile(historyPath, JSON.stringify(existingHistory));
+
+  await expectAppErrorCode(
+    syncStylePreview({
+      rootDir,
+      styleId: 'sticker',
+      outputPaths: [sourcePath],
+      jobId: 'job-1',
+      resizeImpl: async (_sourcePath, targetPath) => {
+        await writeFile(targetPath, 'new-preview');
+      },
+      renameImpl: async (from, to) => {
+        if (to === historyPath) {
+          throw new Error('history rename failed');
+        }
+        await rename(from, to);
+      },
+    }),
+    'STYLE_PREVIEW_SYNC_FAILED',
+  );
+
+  assert.equal(await readFile(previewPath, 'utf8'), 'old-preview');
+  assert.deepEqual(await readStyleHistory(rootDir), existingHistory);
+  assert.deepEqual(await readdir(path.join(rootDir, 'styles', 'previews')), ['sticker.jpg']);
+  assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
+});
+
+test('syncStylePreview serializes concurrent style updates through the lock', async () => {
+  const rootDir = await createRoot();
+  const firstSource = await writeOutput(rootDir, 'first.png', 'first');
+  const secondSource = await writeOutput(rootDir, 'second.png', 'second');
+  let startedCount = 0;
+  let releaseFirst;
+  let resolveFirstStarted;
+  const firstStarted = new Promise((resolve) => {
+    resolveFirstStarted = resolve;
+  });
+  const firstCanFinish = new Promise((resolve) => {
+    releaseFirst = resolve;
+  });
+  const resizeImpl = async (_sourcePath, targetPath) => {
+    startedCount += 1;
+    if (startedCount === 1) resolveFirstStarted();
+    await writeFile(targetPath, `preview-${startedCount}`);
+    if (startedCount === 1) {
+      await firstCanFinish;
+    }
+  };
+
+  const first = syncStylePreview({
+    rootDir,
+    styleId: 'alpha',
+    outputPaths: [firstSource],
+    jobId: 'job-a',
+    resizeImpl,
+  });
+  const second = syncStylePreview({
+    rootDir,
+    styleId: 'beta',
+    outputPaths: [secondSource],
+    jobId: 'job-b',
+    resizeImpl,
+  });
+
+  await firstStarted;
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(startedCount, 1);
+  releaseFirst();
+  await Promise.all([first, second]);
+
+  const history = await readStyleHistory(rootDir);
+  assert.equal(history.alpha.styleId, 'alpha');
+  assert.equal(history.beta.styleId, 'beta');
+  assert.equal(Object.keys(history).length, 2);
+  assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
+  assert.deepEqual((await readdir(path.join(rootDir, 'styles', 'previews'))).sort(), ['alpha.jpg', 'beta.jpg']);
 });
 
 test('syncStylePreview rejects unreadable source paths', async () => {
