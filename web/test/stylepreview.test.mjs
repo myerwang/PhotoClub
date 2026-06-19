@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import { constants } from 'node:fs';
 import {
   copyFile,
@@ -146,6 +147,24 @@ async function writeLockLease(rootDir, ownerToken, pid) {
     path.join(lockDirectory, `${ownerToken}.json`),
     JSON.stringify({ ownerToken, pid }),
   );
+}
+
+async function runNodeModule(source) {
+  const child = spawn(process.execPath, ['--input-type=module', '--eval', source], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let stdout = '';
+  let stderr = '';
+  child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+  child.stdout.on('data', (chunk) => { stdout += chunk; });
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
+
+  const exitCode = await new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('close', resolve);
+  });
+  return { exitCode, stderr, stdout };
 }
 
 async function readLockOwner(rootDir) {
@@ -730,6 +749,178 @@ test('syncStylePreview reclaims an abandoned same-process lease after release un
   assert.equal(timing.timerCount, 0);
 });
 
+test('syncStylePreview lets another process reclaim a released marker while owner pid is alive', async () => {
+  const rootDir = await createRoot();
+  const firstSource = await writeOutput(rootDir, 'first.png', 'first');
+  const secondSource = await writeOutput(rootDir, 'second.png', 'second');
+  let cleanupFailures = 0;
+
+  await syncStylePreview({
+    rootDir,
+    styleId: 'alpha',
+    outputPaths: [firstSource],
+    jobId: 'job-a',
+    lockOptions: {
+      unlinkImpl: async (targetPath) => {
+        if (targetPath.includes('style-history.lock')) {
+          cleanupFailures += 1;
+          const error = new Error('released marker cleanup failed');
+          error.code = 'EACCES';
+          throw error;
+        }
+        await unlink(targetPath);
+      },
+    },
+    resizeImpl: async (_sourcePath, targetPath) => {
+      await writeFile(targetPath, 'alpha');
+    },
+  });
+
+  const moduleUrl = new URL('../lib/stylepreview.mjs', import.meta.url).href;
+  const childSource = `
+    import { writeFile } from 'node:fs/promises';
+    import { syncStylePreview } from ${JSON.stringify(moduleUrl)};
+    const record = await syncStylePreview({
+      rootDir: ${JSON.stringify(rootDir)},
+      styleId: 'beta',
+      outputPaths: [${JSON.stringify(secondSource)}],
+      jobId: 'job-b',
+      lockOptions: {
+        staleMs: 1,
+        timeoutMs: 0,
+        nowImpl: () => new Date(Date.now() + 60_000),
+      },
+      resizeImpl: async (_sourcePath, targetPath) => {
+        await writeFile(targetPath, 'beta');
+      },
+    });
+    process.stdout.write(JSON.stringify(record));
+  `;
+  const child = await runNodeModule(childSource);
+
+  assert.equal(child.exitCode, 0, child.stderr);
+  assert.equal(JSON.parse(child.stdout).styleId, 'beta');
+  assert.equal(cleanupFailures, 1);
+  assert.deepEqual(Object.keys(await readStyleHistory(rootDir)).sort(), ['alpha', 'beta']);
+  assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
+});
+
+test('syncStylePreview publishes releasedAt when marker rename fails for cross-process reclaim', async () => {
+  const rootDir = await createRoot();
+  const firstSource = await writeOutput(rootDir, 'first.png', 'first');
+  const secondSource = await writeOutput(rootDir, 'second.png', 'second');
+  let markerRenameFailures = 0;
+  let cleanupFailures = 0;
+
+  await syncStylePreview({
+    rootDir,
+    styleId: 'alpha',
+    outputPaths: [firstSource],
+    jobId: 'job-a',
+    lockOptions: {
+      renameImpl: async (from, to) => {
+        if (to.endsWith('.released.json')) {
+          markerRenameFailures += 1;
+          const error = new Error('marker rename failed');
+          error.code = 'EACCES';
+          throw error;
+        }
+        await rename(from, to);
+      },
+      unlinkImpl: async (targetPath) => {
+        if (targetPath.includes('style-history.lock')) {
+          cleanupFailures += 1;
+          const error = new Error('released state cleanup failed');
+          error.code = 'EACCES';
+          throw error;
+        }
+        await unlink(targetPath);
+      },
+    },
+    resizeImpl: async (_sourcePath, targetPath) => {
+      await writeFile(targetPath, 'alpha');
+    },
+  });
+
+  const releasedLease = await readLockLease(rootDir);
+  assert.equal(releasedLease.pid, process.pid);
+  assert.equal(typeof releasedLease.releasedAt, 'string');
+
+  const moduleUrl = new URL('../lib/stylepreview.mjs', import.meta.url).href;
+  const childSource = `
+    import { writeFile } from 'node:fs/promises';
+    import { syncStylePreview } from ${JSON.stringify(moduleUrl)};
+    const record = await syncStylePreview({
+      rootDir: ${JSON.stringify(rootDir)},
+      styleId: 'beta',
+      outputPaths: [${JSON.stringify(secondSource)}],
+      jobId: 'job-b',
+      lockOptions: { timeoutMs: 0 },
+      resizeImpl: async (_sourcePath, targetPath) => {
+        await writeFile(targetPath, 'beta');
+      },
+    });
+    process.stdout.write(JSON.stringify(record));
+  `;
+  const child = await runNodeModule(childSource);
+
+  assert.equal(child.exitCode, 0, child.stderr);
+  assert.equal(JSON.parse(child.stdout).styleId, 'beta');
+  assert.equal(markerRenameFailures, 1);
+  assert.equal(cleanupFailures, 1);
+  assert.deepEqual(Object.keys(await readStyleHistory(rootDir)).sort(), ['alpha', 'beta']);
+  assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
+});
+
+test('syncStylePreview surfaces release failure when marker and releasedAt publication both fail', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.png', 'source');
+  let fallbackWrites = 0;
+  let caught;
+
+  try {
+    await syncStylePreview({
+      rootDir,
+      styleId: 'alpha',
+      outputPaths: [sourcePath],
+      jobId: 'job-a',
+      lockOptions: {
+        renameImpl: async (_from, to) => {
+          if (to.endsWith('.released.json')) {
+            const error = new Error('marker rename failed');
+            error.code = 'EACCES';
+            throw error;
+          }
+        },
+        writeFileImpl: async (targetPath, data, options) => {
+          if (options?.flag === 'wx') {
+            await writeFile(targetPath, data, options);
+            return;
+          }
+          fallbackWrites += 1;
+          const error = new Error('releasedAt write failed');
+          error.code = 'EACCES';
+          throw error;
+        },
+      },
+      resizeImpl: async (_sourcePath, targetPath) => {
+        await writeFile(targetPath, 'alpha');
+      },
+    });
+  } catch (error) {
+    caught = error;
+  }
+
+  try {
+    assert.ok(caught instanceof AppError);
+    assert.equal(caught.code, 'STYLE_PREVIEW_SYNC_FAILED');
+    assert.equal(fallbackWrites, 1);
+    assert.equal((await readStyleHistory(rootDir)).alpha.styleId, 'alpha');
+  } finally {
+    await removeLock(rootDir);
+  }
+});
+
 test('syncStylePreview stale takeover cannot remove a changed owner', async () => {
   const rootDir = await createRoot();
   const secondSource = await writeOutput(rootDir, 'second.png', 'second');
@@ -993,10 +1184,11 @@ test('syncStylePreview quarantines and recovers a stale partially written lock',
         mtimeMs: 0,
       }),
       renameImpl: async (from, to) => {
-        assert.equal(from, lockDirectory);
-        quarantinePath = to;
-        assert.equal(path.dirname(to), path.dirname(lockDirectory));
-        assert.match(path.basename(to), /^style-history\.lock\.quarantine\./u);
+        if (from === lockDirectory) {
+          quarantinePath = to;
+          assert.equal(path.dirname(to), path.dirname(lockDirectory));
+          assert.match(path.basename(to), /^style-history\.lock\.quarantine\./u);
+        }
         await rename(from, to);
       },
       rmImpl: async (targetPath, options) => {
@@ -1039,7 +1231,7 @@ test('syncStylePreview quarantines a stale malformed lock with unexpected entrie
         mtimeMs: 0,
       }),
       renameImpl: async (from, to) => {
-        quarantineCount += 1;
+        if (from === lockDirectory) quarantineCount += 1;
         await rename(from, to);
       },
       rmImpl: rm,

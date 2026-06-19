@@ -189,6 +189,9 @@ async function readLockState(lockDirectory, fsOps) {
           validLeases.push({
             ownerToken: parsed.ownerToken,
             pid: parsed.pid,
+            releasedAt: typeof parsed.releasedAt === 'string' && parsed.releasedAt.length > 0
+              ? parsed.releasedAt
+              : undefined,
             leasePath,
             mtimeMs: stats.mtimeMs,
           });
@@ -201,9 +204,16 @@ async function readLockState(lockDirectory, fsOps) {
     if (
       entries.length === 1
       && validLeases.length === 1
-      && entries[0] === `${validLeases[0].ownerToken}.json`
     ) {
-      return { kind: 'lease', ...validLeases[0] };
+      if (entries[0] === `${validLeases[0].ownerToken}.json`) {
+        return {
+          kind: validLeases[0].releasedAt ? 'released' : 'lease',
+          ...validLeases[0],
+        };
+      }
+      if (entries[0] === `${validLeases[0].ownerToken}.released.json`) {
+        return { kind: 'released', ...validLeases[0] };
+      }
     }
 
     return {
@@ -225,6 +235,20 @@ function sameLease(left, right) {
     && right.kind === 'lease'
     && left.ownerToken === right.ownerToken
     && left.pid === right.pid
+    && left.releasedAt === right.releasedAt
+    && left.leasePath === right.leasePath
+  );
+}
+
+function sameReleasedLease(left, right) {
+  return Boolean(
+    left
+    && right
+    && left.kind === 'released'
+    && right.kind === 'released'
+    && left.ownerToken === right.ownerToken
+    && left.pid === right.pid
+    && left.releasedAt === right.releasedAt
     && left.leasePath === right.leasePath
   );
 }
@@ -347,6 +371,15 @@ async function removeObservedLease(lockDirectory, observed, fsOps) {
   return true;
 }
 
+async function reclaimReleasedLease(lockDirectory, observed, fsOps) {
+  const confirmed = await readLockState(lockDirectory, fsOps);
+  if (!sameReleasedLease(confirmed, observed)) return false;
+
+  const removed = await unlinkIfExists(confirmed.leasePath, fsOps.unlinkImpl);
+  if (!removed) return false;
+  return removeLockDirectoryIfEmpty(lockDirectory, fsOps);
+}
+
 async function hasLiveRecordedProcess(state, fsOps) {
   for (const owner of state.validOwners ?? []) {
     if (await recordedOwnerIsActive(fsOps, owner)) return true;
@@ -413,13 +446,36 @@ async function acquireStyleHistoryLock(rootDir, lockOptions) {
       const release = async () => {
         if (released) return;
         released = true;
-        activeLeaseTokens.delete(ownerToken);
         try {
           await heartbeat.stop();
-          const removed = await unlinkIfExists(leasePath, fsOps.unlinkImpl);
-          if (removed) await removeLockDirectoryIfEmpty(lockDirectory, fsOps);
-        } catch {
-          // Best effort; stale recovery can clean up if needed.
+          await heartbeat.assertOwned();
+          const releasedLeasePath = path.join(lockDirectory, `${ownerToken}.released.json`);
+          let publishedPath;
+          try {
+            await fsOps.renameImpl(leasePath, releasedLeasePath);
+            publishedPath = releasedLeasePath;
+          } catch {
+            await heartbeat.assertOwned();
+            try {
+              await fsOps.writeFileImpl(leasePath, JSON.stringify({
+                ownerToken,
+                pid,
+                createdAt,
+                releasedAt: lockNow(fsOps).toISOString(),
+              }));
+              publishedPath = leasePath;
+            } catch {
+              throw syncFailed('风格历史锁释放状态发布失败');
+            }
+          }
+
+          activeLeaseTokens.delete(ownerToken);
+          try {
+            const removed = await unlinkIfExists(publishedPath, fsOps.unlinkImpl);
+            if (removed) await removeLockDirectoryIfEmpty(lockDirectory, fsOps);
+          } catch {
+            // The persisted released state lets a contender complete cleanup.
+          }
         } finally {
           activeLeaseTokens.delete(ownerToken);
         }
@@ -432,6 +488,13 @@ async function acquireStyleHistoryLock(rootDir, lockOptions) {
     }
 
     const observed = await readLockState(lockDirectory, fsOps);
+    if (observed?.kind === 'released') {
+      try {
+        if (await reclaimReleasedLease(lockDirectory, observed, fsOps)) continue;
+      } catch {
+        throw syncFailed('风格历史锁获取失败');
+      }
+    }
     if (observed && lockNow(fsOps).getTime() - observed.mtimeMs > fsOps.staleMs) {
       try {
         if (observed.kind === 'lease') {
