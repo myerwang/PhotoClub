@@ -1,7 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { constants } from 'node:fs';
-import { copyFile, mkdtemp, mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
+import {
+  copyFile,
+  mkdtemp,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rmdir,
+  stat,
+  unlink,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -21,6 +32,123 @@ async function writeOutput(rootDir, name, content) {
 
 async function expectAppErrorCode(promise, code) {
   await assert.rejects(promise, (error) => error instanceof AppError && error.code === code);
+}
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, reject, resolve };
+}
+
+async function waitFor(predicate, message) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    if (predicate()) return;
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  assert.fail(message);
+}
+
+function createLockTiming() {
+  let nowMs = Date.now();
+  const sleepers = [];
+  const timers = new Set();
+  let unrefCount = 0;
+
+  return {
+    options: {
+      heartbeatMs: 10,
+      nowImpl: () => new Date(nowMs),
+      retryMs: 5,
+      sleepImpl: async () => {
+        const sleeper = deferred();
+        sleepers.push(sleeper);
+        await sleeper.promise;
+      },
+      staleMs: 30,
+      timeoutMs: 500,
+      setIntervalImpl(callback) {
+        const timer = {
+          callback,
+          unref() {
+            unrefCount += 1;
+          },
+        };
+        timers.add(timer);
+        return timer;
+      },
+      clearIntervalImpl(timer) {
+        timers.delete(timer);
+      },
+    },
+    advance(ms) {
+      nowMs += ms;
+    },
+    async heartbeatAll() {
+      await Promise.all([...timers].map((timer) => timer.callback()));
+      await new Promise((resolve) => setImmediate(resolve));
+    },
+    releaseNextSleep() {
+      const sleeper = sleepers.shift();
+      assert.ok(sleeper, 'expected a pending lock retry');
+      sleeper.resolve();
+    },
+    get pendingSleeps() {
+      return sleepers.length;
+    },
+    get timerCount() {
+      return timers.size;
+    },
+    get unrefCount() {
+      return unrefCount;
+    },
+  };
+}
+
+async function replaceLockOwner(rootDir, ownerToken) {
+  const lockFilePath = path.join(rootDir, '.control', 'style-history.lock');
+  const lockStats = await stat(lockFilePath);
+
+  if (lockStats.isDirectory()) {
+    const entries = await readdir(lockFilePath);
+    await Promise.all(entries.map((entry) => unlink(path.join(lockFilePath, entry))));
+    await rmdir(lockFilePath);
+    await mkdir(lockFilePath);
+    await writeFile(
+      path.join(lockFilePath, `${ownerToken}.json`),
+      JSON.stringify({ ownerToken }),
+      { flag: 'wx' },
+    );
+    return;
+  }
+
+  await unlink(lockFilePath);
+  await writeFile(lockFilePath, JSON.stringify({ ownerToken }), { flag: 'wx' });
+}
+
+async function readLockOwner(rootDir) {
+  const lockFilePath = path.join(rootDir, '.control', 'style-history.lock');
+  const lockStats = await stat(lockFilePath);
+  if (lockStats.isDirectory()) {
+    const [entry] = await readdir(lockFilePath);
+    return JSON.parse(await readFile(path.join(lockFilePath, entry), 'utf8')).ownerToken;
+  }
+  return JSON.parse(await readFile(lockFilePath, 'utf8')).ownerToken;
+}
+
+async function removeLock(rootDir) {
+  const lockFilePath = path.join(rootDir, '.control', 'style-history.lock');
+  const lockStats = await stat(lockFilePath);
+  if (lockStats.isDirectory()) {
+    const entries = await readdir(lockFilePath);
+    await Promise.all(entries.map((entry) => unlink(path.join(lockFilePath, entry))));
+    await rmdir(lockFilePath);
+    return;
+  }
+  await unlink(lockFilePath);
 }
 
 test('readStyleHistory returns an empty object when history is missing', async () => {
@@ -128,6 +256,7 @@ test('syncStylePreview rejects unsafe ids and empty inputs', async () => {
 test('syncStylePreview leaves no success history behind when resize fails', async () => {
   const rootDir = await createRoot();
   const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const timing = createLockTiming();
 
   await expectAppErrorCode(
     syncStylePreview({
@@ -135,7 +264,9 @@ test('syncStylePreview leaves no success history behind when resize fails', asyn
       styleId: 'sticker',
       outputPaths: [sourcePath],
       jobId: 'job-1',
-      resizeImpl: async () => {
+      lockOptions: timing.options,
+      resizeImpl: async (_sourcePath, targetPath) => {
+        await writeFile(targetPath, 'partial');
         throw new Error('resize failed');
       },
     }),
@@ -147,6 +278,43 @@ test('syncStylePreview leaves no success history behind when resize fails', asyn
   const controlDir = path.join(rootDir, '.control');
   assert.deepEqual(await readdir(previewDir), []);
   assert.deepEqual(await readdir(controlDir), []);
+  assert.equal(timing.timerCount, 0);
+  assert.equal(timing.unrefCount, 1);
+});
+
+test('syncStylePreview keeps the old preview readable until resize completes', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const previewPath = path.join(rootDir, 'styles', 'previews', 'sticker.jpg');
+  const historyPath = path.join(rootDir, '.control', 'style-history.json');
+  const events = [];
+  await mkdir(path.dirname(previewPath), { recursive: true });
+  await writeFile(previewPath, 'old-preview');
+
+  await syncStylePreview({
+    rootDir,
+    styleId: 'sticker',
+    outputPaths: [sourcePath],
+    jobId: 'job-1',
+    resizeImpl: async (_sourcePath, targetPath) => {
+      events.push('resize');
+      assert.equal(await readFile(previewPath, 'utf8'), 'old-preview');
+      assert.deepEqual(await readdir(path.dirname(previewPath)), ['sticker.jpg']);
+      await writeFile(targetPath, 'new-preview');
+    },
+    copyFileImpl: async (from, to) => {
+      events.push('backup');
+      assert.equal(await readFile(previewPath, 'utf8'), 'old-preview');
+      await copyFile(from, to);
+    },
+    renameImpl: async (from, to) => {
+      events.push(to === previewPath ? 'install' : to === historyPath ? 'commit' : 'rename');
+      await rename(from, to);
+    },
+  });
+
+  assert.deepEqual(events, ['resize', 'backup', 'install', 'commit']);
+  assert.equal(await readFile(previewPath, 'utf8'), 'new-preview');
 });
 
 test('syncStylePreview restores the previous preview when history commit fails', async () => {
@@ -154,6 +322,7 @@ test('syncStylePreview restores the previous preview when history commit fails',
   const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
   const previewPath = path.join(rootDir, 'styles', 'previews', 'sticker.jpg');
   const historyPath = path.join(rootDir, '.control', 'style-history.json');
+  let backupPath;
   await mkdir(path.dirname(previewPath), { recursive: true });
   await mkdir(path.dirname(historyPath), { recursive: true });
   await writeFile(previewPath, 'old-preview');
@@ -177,6 +346,10 @@ test('syncStylePreview restores the previous preview when history commit fails',
       resizeImpl: async (_sourcePath, targetPath) => {
         await writeFile(targetPath, 'new-preview');
       },
+      copyFileImpl: async (from, to) => {
+        backupPath = to;
+        await copyFile(from, to);
+      },
       renameImpl: async (from, to) => {
         if (to === historyPath) {
           throw new Error('history rename failed');
@@ -191,57 +364,412 @@ test('syncStylePreview restores the previous preview when history commit fails',
   assert.deepEqual(await readStyleHistory(rootDir), existingHistory);
   assert.deepEqual(await readdir(path.join(rootDir, 'styles', 'previews')), ['sticker.jpg']);
   assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
+  await assert.rejects(readFile(backupPath, 'utf8'));
 });
 
-test('syncStylePreview serializes concurrent style updates through the lock', async () => {
+test('syncStylePreview preserves backup when restoration fails', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const previewPath = path.join(rootDir, 'styles', 'previews', 'sticker.jpg');
+  const historyPath = path.join(rootDir, '.control', 'style-history.json');
+  let backupPath;
+  await mkdir(path.dirname(previewPath), { recursive: true });
+  await mkdir(path.dirname(historyPath), { recursive: true });
+  await writeFile(previewPath, 'old-preview');
+  await writeFile(historyPath, JSON.stringify({
+    sticker: {
+      styleId: 'sticker',
+      generatedAt: '2026-06-19T11:00:00.000Z',
+      jobId: 'job-old',
+      sourcePath: '/gone/old.png',
+      preview: 'styles/previews/sticker.jpg',
+    },
+  }));
+
+  await expectAppErrorCode(
+    syncStylePreview({
+      rootDir,
+      styleId: 'sticker',
+      outputPaths: [sourcePath],
+      jobId: 'job-1',
+      resizeImpl: async (_sourcePath, targetPath) => {
+        await writeFile(targetPath, 'new-preview');
+      },
+      copyFileImpl: async (from, to) => {
+        backupPath = to;
+        await copyFile(from, to);
+      },
+      renameImpl: async (from, to) => {
+        if (to === historyPath) {
+          throw new Error('history rename failed');
+        }
+        if (from === backupPath && to === previewPath) {
+          throw new Error('restore failed');
+        }
+        await rename(from, to);
+      },
+    }),
+    'STYLE_PREVIEW_SYNC_FAILED',
+  );
+
+  assert.equal(await readFile(previewPath, 'utf8'), 'new-preview');
+  assert.equal(await readFile(backupPath, 'utf8'), 'old-preview');
+  assert.deepEqual(await readStyleHistory(rootDir), {
+    sticker: {
+      styleId: 'sticker',
+      generatedAt: '2026-06-19T11:00:00.000Z',
+      jobId: 'job-old',
+      sourcePath: '/gone/old.png',
+      preview: 'styles/previews/sticker.jpg',
+    },
+  });
+  assert.deepEqual((await readdir(path.join(rootDir, 'styles', 'previews'))).sort(), [path.basename(backupPath), 'sticker.jpg'].sort());
+});
+
+test('syncStylePreview removes a newly installed preview when history commit fails', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const previewPath = path.join(rootDir, 'styles', 'previews', 'sticker.jpg');
+  const historyPath = path.join(rootDir, '.control', 'style-history.json');
+
+  await expectAppErrorCode(
+    syncStylePreview({
+      rootDir,
+      styleId: 'sticker',
+      outputPaths: [sourcePath],
+      jobId: 'job-1',
+      resizeImpl: async (_sourcePath, targetPath) => {
+        await writeFile(targetPath, 'new-preview');
+      },
+      renameImpl: async (from, to) => {
+        if (to === historyPath) throw new Error('history rename failed');
+        await rename(from, to);
+      },
+    }),
+    'STYLE_PREVIEW_SYNC_FAILED',
+  );
+
+  await assert.rejects(readFile(previewPath, 'utf8'));
+  assert.deepEqual(await readStyleHistory(rootDir), {});
+  assert.deepEqual(await readdir(path.dirname(previewPath)), []);
+  assert.deepEqual(await readdir(path.dirname(historyPath)), []);
+});
+
+test('syncStylePreview ignores backup cleanup failure after a successful commit', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const previewPath = path.join(rootDir, 'styles', 'previews', 'sticker.jpg');
+  const historyPath = path.join(rootDir, '.control', 'style-history.json');
+  let backupPath;
+  await mkdir(path.dirname(previewPath), { recursive: true });
+  await mkdir(path.dirname(historyPath), { recursive: true });
+  await writeFile(previewPath, 'old-preview');
+  await writeFile(historyPath, JSON.stringify({
+    other: {
+      styleId: 'other',
+      generatedAt: '2026-06-19T11:00:00.000Z',
+      jobId: 'job-old',
+      sourcePath: '/gone/other.png',
+      preview: 'styles/previews/other.jpg',
+    },
+  }));
+
+  const record = await syncStylePreview({
+    rootDir,
+    styleId: 'sticker',
+    outputPaths: [sourcePath],
+    jobId: 'job-1',
+    resizeImpl: async (_sourcePath, targetPath) => {
+      await writeFile(targetPath, 'new-preview');
+    },
+    copyFileImpl: async (from, to) => {
+      backupPath = to;
+      await copyFile(from, to);
+    },
+    unlinkImpl: async (targetPath) => {
+      if (targetPath === backupPath) {
+        throw new Error('backup cleanup failed');
+      }
+      await unlink(targetPath);
+    },
+  });
+
+  assert.equal(record.styleId, 'sticker');
+  assert.equal(await readFile(previewPath, 'utf8'), 'new-preview');
+  const history = await readStyleHistory(rootDir);
+  assert.deepEqual(history.other.styleId, 'other');
+  assert.deepEqual(history.sticker, record);
+  assert.equal(await readFile(backupPath, 'utf8'), 'old-preview');
+});
+
+test('syncStylePreview release never deletes a replacement owner lock', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.png', 'source');
+  const timing = createLockTiming();
+  const releaseObserved = deferred();
+  const allowRelease = deferred();
+  let blocked = false;
+
+  const operation = syncStylePreview({
+    rootDir,
+    styleId: 'alpha',
+    outputPaths: [sourcePath],
+    jobId: 'job-a',
+    lockOptions: {
+      ...timing.options,
+      unlinkImpl: async (targetPath) => {
+        if (!blocked && targetPath.includes('style-history.lock')) {
+          blocked = true;
+          releaseObserved.resolve();
+          await allowRelease.promise;
+        }
+        await unlink(targetPath);
+      },
+    },
+    resizeImpl: async (_sourcePath, targetPath) => {
+      await writeFile(targetPath, 'alpha');
+    },
+  });
+
+  await releaseObserved.promise;
+  await replaceLockOwner(rootDir, 'replacement-owner');
+  allowRelease.resolve();
+  await operation;
+
+  assert.equal(await readLockOwner(rootDir), 'replacement-owner');
+  assert.equal(timing.timerCount, 0);
+  assert.equal(timing.unrefCount, 1);
+  await removeLock(rootDir);
+});
+
+test('syncStylePreview stale takeover cannot remove a changed owner', async () => {
   const rootDir = await createRoot();
   const firstSource = await writeOutput(rootDir, 'first.png', 'first');
   const secondSource = await writeOutput(rootDir, 'second.png', 'second');
-  let startedCount = 0;
-  let releaseFirst;
-  let resolveFirstStarted;
-  const firstStarted = new Promise((resolve) => {
-    resolveFirstStarted = resolve;
-  });
-  const firstCanFinish = new Promise((resolve) => {
-    releaseFirst = resolve;
-  });
-  const resizeImpl = async (_sourcePath, targetPath) => {
-    startedCount += 1;
-    if (startedCount === 1) resolveFirstStarted();
-    await writeFile(targetPath, `preview-${startedCount}`);
-    if (startedCount === 1) {
-      await firstCanFinish;
-    }
-  };
+  const thirdSource = await writeOutput(rootDir, 'third.png', 'third');
+  const timing = createLockTiming();
+  const firstStarted = deferred();
+  const firstCanFinish = deferred();
+  const staleRemovalObserved = deferred();
+  const allowStaleRemoval = deferred();
+  const thirdStarted = deferred();
+  const thirdCanFinish = deferred();
+  let secondStarted = false;
+  let removalBlocked = false;
 
   const first = syncStylePreview({
     rootDir,
     styleId: 'alpha',
     outputPaths: [firstSource],
     jobId: 'job-a',
-    resizeImpl,
+    lockOptions: timing.options,
+    resizeImpl: async (_sourcePath, targetPath) => {
+      firstStarted.resolve();
+      await writeFile(targetPath, 'alpha');
+      await firstCanFinish.promise;
+    },
   });
+  await firstStarted.promise;
+  timing.advance(40);
+
   const second = syncStylePreview({
     rootDir,
     styleId: 'beta',
     outputPaths: [secondSource],
     jobId: 'job-b',
-    resizeImpl,
+    lockOptions: {
+      ...timing.options,
+      statImpl: async (targetPath) => ({
+        ...await stat(targetPath),
+        mtimeMs: 0,
+      }),
+      unlinkImpl: async (targetPath) => {
+        if (!removalBlocked && targetPath.includes('style-history.lock')) {
+          removalBlocked = true;
+          staleRemovalObserved.resolve();
+          await allowStaleRemoval.promise;
+        }
+        await unlink(targetPath);
+      },
+    },
+    resizeImpl: async (_sourcePath, targetPath) => {
+      secondStarted = true;
+      await writeFile(targetPath, 'beta');
+    },
+  });
+  await staleRemovalObserved.promise;
+
+  firstCanFinish.resolve();
+  await first;
+
+  const third = syncStylePreview({
+    rootDir,
+    styleId: 'gamma',
+    outputPaths: [thirdSource],
+    jobId: 'job-c',
+    lockOptions: timing.options,
+    resizeImpl: async (_sourcePath, targetPath) => {
+      thirdStarted.resolve();
+      await writeFile(targetPath, 'gamma');
+      await thirdCanFinish.promise;
+    },
+  });
+  await thirdStarted.promise;
+
+  allowStaleRemoval.resolve();
+  await waitFor(
+    () => secondStarted || timing.pendingSleeps > 0,
+    'stale contender neither entered the operation nor retried',
+  );
+  const enteredWhileReplacementOwned = secondStarted;
+
+  thirdCanFinish.resolve();
+  await third;
+  if (!secondStarted) timing.releaseNextSleep();
+  await second;
+
+  assert.equal(enteredWhileReplacementOwned, false);
+  const history = await readStyleHistory(rootDir);
+  assert.deepEqual(Object.keys(history).sort(), ['alpha', 'beta', 'gamma']);
+  assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
+  assert.equal(timing.timerCount, 0);
+  assert.equal(timing.unrefCount, 3);
+});
+
+test('syncStylePreview keeps a long-running lock alive while later writers wait', async () => {
+  const rootDir = await createRoot();
+  const firstSource = await writeOutput(rootDir, 'first.png', 'first');
+  const secondSource = await writeOutput(rootDir, 'second.png', 'second');
+  const thirdSource = await writeOutput(rootDir, 'third.png', 'third');
+  const timing = createLockTiming();
+  const starts = [];
+  const firstCanFinish = deferred();
+  const secondCanFinish = deferred();
+  const firstStarted = deferred();
+  const secondStarted = deferred();
+  const thirdStarted = deferred();
+
+  const first = syncStylePreview({
+    rootDir,
+    styleId: 'alpha',
+    outputPaths: [firstSource],
+    jobId: 'job-a',
+    lockOptions: timing.options,
+    resizeImpl: async (_sourcePath, targetPath) => {
+      starts.push('alpha');
+      firstStarted.resolve();
+      await writeFile(targetPath, 'alpha');
+      await firstCanFinish.promise;
+    },
+  });
+  await firstStarted.promise;
+
+  timing.advance(40);
+  await timing.heartbeatAll();
+
+  const second = syncStylePreview({
+    rootDir,
+    styleId: 'beta',
+    outputPaths: [secondSource],
+    jobId: 'job-b',
+    lockOptions: timing.options,
+    resizeImpl: async (_sourcePath, targetPath) => {
+      starts.push('beta');
+      secondStarted.resolve();
+      await writeFile(targetPath, 'beta');
+      await secondCanFinish.promise;
+    },
+  });
+  await waitFor(() => timing.pendingSleeps === 1, 'second writer did not wait for the active lease');
+
+  const third = syncStylePreview({
+    rootDir,
+    styleId: 'gamma',
+    outputPaths: [thirdSource],
+    jobId: 'job-c',
+    lockOptions: timing.options,
+    resizeImpl: async (_sourcePath, targetPath) => {
+      starts.push('gamma');
+      thirdStarted.resolve();
+      await writeFile(targetPath, 'gamma');
+    },
   });
 
-  await firstStarted;
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(startedCount, 1);
-  releaseFirst();
-  await Promise.all([first, second]);
+  await waitFor(() => timing.pendingSleeps === 2, 'third writer did not wait for the active lease');
+  assert.deepEqual(starts, ['alpha']);
+  firstCanFinish.resolve();
+  await first;
+  timing.releaseNextSleep();
+  await secondStarted.promise;
+  assert.deepEqual(starts, ['alpha', 'beta']);
+  secondCanFinish.resolve();
+  await second;
+  timing.releaseNextSleep();
+  await thirdStarted.promise;
+  await third;
 
   const history = await readStyleHistory(rootDir);
   assert.equal(history.alpha.styleId, 'alpha');
   assert.equal(history.beta.styleId, 'beta');
-  assert.equal(Object.keys(history).length, 2);
+  assert.equal(history.gamma.styleId, 'gamma');
+  assert.equal(Object.keys(history).length, 3);
   assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
-  assert.deepEqual((await readdir(path.join(rootDir, 'styles', 'previews'))).sort(), ['alpha.jpg', 'beta.jpg']);
+  assert.equal(timing.timerCount, 0);
+  assert.equal(timing.unrefCount, 3);
+});
+
+test('syncStylePreview bounds lock retries using injected timing', async () => {
+  const rootDir = await createRoot();
+  const firstSource = await writeOutput(rootDir, 'first.png', 'first');
+  const secondSource = await writeOutput(rootDir, 'second.png', 'second');
+  const firstTiming = createLockTiming();
+  const firstStarted = deferred();
+  const firstCanFinish = deferred();
+  let nowMs = Date.now();
+  let sleepCalls = 0;
+
+  const first = syncStylePreview({
+    rootDir,
+    styleId: 'alpha',
+    outputPaths: [firstSource],
+    jobId: 'job-a',
+    lockOptions: firstTiming.options,
+    resizeImpl: async (_sourcePath, targetPath) => {
+      firstStarted.resolve();
+      await writeFile(targetPath, 'alpha');
+      await firstCanFinish.promise;
+    },
+  });
+  await firstStarted.promise;
+
+  await expectAppErrorCode(
+    syncStylePreview({
+      rootDir,
+      styleId: 'beta',
+      outputPaths: [secondSource],
+      jobId: 'job-b',
+      lockOptions: {
+        heartbeatMs: 10,
+        nowImpl: () => new Date(nowMs),
+        retryMs: 5,
+        sleepImpl: async (ms) => {
+          sleepCalls += 1;
+          nowMs += ms;
+        },
+        staleMs: 1_000,
+        timeoutMs: 12,
+      },
+      resizeImpl: async () => {
+        throw new Error('contender must not acquire the lock');
+      },
+    }),
+    'STYLE_PREVIEW_SYNC_FAILED',
+  );
+
+  firstCanFinish.resolve();
+  await first;
+  assert.equal(sleepCalls, 3);
+  assert.equal(firstTiming.timerCount, 0);
 });
 
 test('syncStylePreview rejects unreadable source paths', async () => {

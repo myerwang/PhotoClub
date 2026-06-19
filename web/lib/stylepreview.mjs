@@ -1,5 +1,17 @@
 import { constants } from 'node:fs';
-import { access, mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
+import {
+  access,
+  copyFile,
+  mkdir,
+  readFile,
+  readdir,
+  rename,
+  rmdir,
+  stat,
+  unlink,
+  utimes,
+  writeFile,
+} from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import * as childProcess from 'node:child_process';
@@ -7,9 +19,11 @@ import * as childProcess from 'node:child_process';
 import { AppError } from './errors.mjs';
 
 const SAFE_STYLE_ID = /^[A-Za-z0-9\u3040-\u30ff\u3400-\u9fff]+$/u;
-const LOCK_RETRY_MS = 100;
-const LOCK_MAX_ATTEMPTS = 200;
-const LOCK_STALE_MS = 60_000;
+const DEFAULT_LOCK_OPTIONS = {
+  retryMs: 100,
+  timeoutMs: 5_000,
+  staleMs: 60_000,
+};
 
 function inputInvalid(message) {
   return new AppError('STYLE_PREVIEW_INPUT_INVALID', message, 400);
@@ -21,6 +35,14 @@ function syncFailed(message) {
 
 function isMissingError(error) {
   return error && typeof error === 'object' && error.code === 'ENOENT';
+}
+
+function isEEXIST(error) {
+  return error && typeof error === 'object' && error.code === 'EEXIST';
+}
+
+function isNotEmptyError(error) {
+  return error && typeof error === 'object' && error.code === 'ENOTEMPTY';
 }
 
 function isHistoryShape(value) {
@@ -68,52 +90,215 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function acquireStyleHistoryLock(rootDir) {
-  const filePath = lockPath(rootDir);
-  for (let attempt = 0; attempt < LOCK_MAX_ATTEMPTS; attempt += 1) {
-    try {
-      await writeFile(filePath, JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() }), { flag: 'wx' });
-      return filePath;
-    } catch (error) {
-      if (!error || error.code !== 'EEXIST') {
-        throw syncFailed('风格历史锁获取失败');
-      }
+function normalizeLockOptions(lockOptions = {}) {
+  const staleMs = Number.isFinite(lockOptions.staleMs) && lockOptions.staleMs > 0
+    ? lockOptions.staleMs
+    : DEFAULT_LOCK_OPTIONS.staleMs;
+  const heartbeatMs = Number.isFinite(lockOptions.heartbeatMs) && lockOptions.heartbeatMs > 0
+    ? lockOptions.heartbeatMs
+    : Math.max(1, Math.floor(staleMs / 3));
 
-      try {
-        const stats = await stat(filePath);
-        if (Date.now() - stats.mtimeMs > LOCK_STALE_MS) {
-          await unlink(filePath).catch(() => {});
-          continue;
-        }
-      } catch (statError) {
-        if (isMissingError(statError)) {
-          continue;
-        }
-        throw syncFailed('风格历史锁获取失败');
-      }
+  return {
+    retryMs: Number.isFinite(lockOptions.retryMs) && lockOptions.retryMs > 0
+      ? lockOptions.retryMs
+      : DEFAULT_LOCK_OPTIONS.retryMs,
+    timeoutMs: Number.isFinite(lockOptions.timeoutMs) && lockOptions.timeoutMs >= 0
+      ? lockOptions.timeoutMs
+      : DEFAULT_LOCK_OPTIONS.timeoutMs,
+    staleMs,
+    heartbeatMs,
+    sleepImpl: lockOptions.sleepImpl ?? sleep,
+    setIntervalImpl: lockOptions.setIntervalImpl ?? setInterval,
+    clearIntervalImpl: lockOptions.clearIntervalImpl ?? clearInterval,
+    readFileImpl: lockOptions.readFileImpl ?? readFile,
+    writeFileImpl: lockOptions.writeFileImpl ?? writeFile,
+    unlinkImpl: lockOptions.unlinkImpl ?? unlink,
+    mkdirImpl: lockOptions.mkdirImpl ?? mkdir,
+    readdirImpl: lockOptions.readdirImpl ?? readdir,
+    rmdirImpl: lockOptions.rmdirImpl ?? rmdir,
+    statImpl: lockOptions.statImpl ?? stat,
+    utimesImpl: lockOptions.utimesImpl ?? utimes,
+    nowImpl: lockOptions.nowImpl ?? (() => new Date()),
+  };
+}
 
-      await sleep(LOCK_RETRY_MS);
+function lockNow(fsOps) {
+  const value = fsOps.nowImpl();
+  return value instanceof Date ? value : new Date(value);
+}
+
+async function removeIfExists(filePath, unlinkImpl = unlink) {
+  if (!filePath) return;
+  try {
+    await unlinkImpl(filePath);
+  } catch (error) {
+    if (!isMissingError(error)) throw error;
+  }
+}
+
+async function unlinkIfExists(filePath, unlinkImpl) {
+  try {
+    await unlinkImpl(filePath);
+    return true;
+  } catch (error) {
+    if (isMissingError(error)) return false;
+    throw error;
+  }
+}
+
+async function readLockState(lockDirectory, fsOps) {
+  try {
+    const entries = await fsOps.readdirImpl(lockDirectory);
+    if (entries.length !== 1 || !entries[0].endsWith('.json')) {
+      const stats = await fsOps.statImpl(lockDirectory);
+      return { ownerToken: null, leasePath: null, mtimeMs: stats.mtimeMs };
     }
+
+    const leasePath = path.join(lockDirectory, entries[0]);
+    const [raw, stats] = await Promise.all([
+      fsOps.readFileImpl(leasePath, 'utf8'),
+      fsOps.statImpl(leasePath),
+    ]);
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.ownerToken !== 'string') {
+      return { ownerToken: null, leasePath: null, mtimeMs: stats.mtimeMs };
+    }
+    return { ownerToken: parsed.ownerToken, leasePath, mtimeMs: stats.mtimeMs };
+  } catch (error) {
+    if (isMissingError(error)) return null;
+    return null;
+  }
+}
+
+function startHeartbeat(leasePath, ownerToken, fsOps) {
+  let stopped = false;
+  let inFlight = null;
+  let timer;
+
+  const stopTimer = () => {
+    if (stopped) return false;
+    stopped = true;
+    fsOps.clearIntervalImpl(timer);
+    return true;
+  };
+
+  const tick = async () => {
+    if (stopped) return;
+    if (inFlight) return inFlight;
+
+    inFlight = (async () => {
+      try {
+        const parsed = JSON.parse(await fsOps.readFileImpl(leasePath, 'utf8'));
+        if (!parsed || parsed.ownerToken !== ownerToken) {
+          stopTimer();
+          return;
+        }
+        const now = lockNow(fsOps);
+        await fsOps.utimesImpl(leasePath, now, now);
+      } catch {
+        stopTimer();
+      } finally {
+        inFlight = null;
+      }
+    })();
+
+    return inFlight;
+  };
+
+  timer = fsOps.setIntervalImpl(tick, fsOps.heartbeatMs);
+  timer.unref?.();
+  return {
+    async stop() {
+      stopTimer();
+      if (inFlight) await inFlight;
+    },
+  };
+}
+
+async function removeLockDirectoryIfEmpty(lockDirectory, fsOps) {
+  try {
+    await fsOps.rmdirImpl(lockDirectory);
+    return true;
+  } catch (error) {
+    if (isMissingError(error) || isNotEmptyError(error) || isEEXIST(error)) return false;
+    throw error;
+  }
+}
+
+async function removeObservedLease(lockDirectory, observed, fsOps) {
+  const confirmed = await readLockState(lockDirectory, fsOps);
+  if (
+    !confirmed
+    || !confirmed.leasePath
+    || confirmed.ownerToken !== observed.ownerToken
+    || confirmed.leasePath !== observed.leasePath
+    || lockNow(fsOps).getTime() - confirmed.mtimeMs <= fsOps.staleMs
+  ) {
+    return false;
+  }
+
+  const removed = await unlinkIfExists(confirmed.leasePath, fsOps.unlinkImpl);
+  if (!removed) return false;
+  await removeLockDirectoryIfEmpty(lockDirectory, fsOps);
+  return true;
+}
+
+async function acquireStyleHistoryLock(rootDir, lockOptions) {
+  const fsOps = normalizeLockOptions(lockOptions);
+  const lockDirectory = lockPath(rootDir);
+  const ownerToken = randomUUID();
+  const leasePath = path.join(lockDirectory, `${ownerToken}.json`);
+  const deadline = lockNow(fsOps).getTime() + fsOps.timeoutMs;
+
+  while (true) {
+    try {
+      await fsOps.mkdirImpl(lockDirectory);
+      const createdAt = lockNow(fsOps).toISOString();
+      try {
+        await fsOps.writeFileImpl(leasePath, JSON.stringify({ ownerToken, createdAt }), { flag: 'wx' });
+      } catch (error) {
+        await removeLockDirectoryIfEmpty(lockDirectory, fsOps).catch(() => {});
+        throw error;
+      }
+
+      const heartbeat = startHeartbeat(leasePath, ownerToken, fsOps);
+      let released = false;
+      const release = async () => {
+        if (released) return;
+        released = true;
+        await heartbeat.stop();
+        try {
+          const removed = await unlinkIfExists(leasePath, fsOps.unlinkImpl);
+          if (removed) await removeLockDirectoryIfEmpty(lockDirectory, fsOps);
+        } catch {
+          // Best effort; stale recovery can clean up if needed.
+        }
+      };
+      return { ownerToken, release };
+    } catch (error) {
+      if (!isEEXIST(error)) {
+        throw syncFailed('风格历史锁获取失败');
+      }
+    }
+
+    const observed = await readLockState(lockDirectory, fsOps);
+    if (observed && lockNow(fsOps).getTime() - observed.mtimeMs > fsOps.staleMs) {
+      try {
+        if (observed.ownerToken && observed.leasePath) {
+          if (await removeObservedLease(lockDirectory, observed, fsOps)) continue;
+        } else if (await removeLockDirectoryIfEmpty(lockDirectory, fsOps)) {
+          continue;
+        }
+      } catch {
+        throw syncFailed('风格历史锁获取失败');
+      }
+    }
+
+    if (lockNow(fsOps).getTime() >= deadline) break;
+    await fsOps.sleepImpl(fsOps.retryMs);
   }
 
   throw syncFailed('风格历史锁超时');
-}
-
-async function removeIfExists(filePath) {
-  if (!filePath) {
-    return;
-  }
-
-  await unlink(filePath).catch((error) => {
-    if (!isMissingError(error)) {
-      throw error;
-    }
-  });
-}
-
-async function restorePreview(renameImpl, backupPath, finalPath) {
-  await removeIfExists(finalPath);
-  await renameImpl(backupPath, finalPath);
 }
 
 export async function readStyleHistory(rootDir) {
@@ -127,12 +312,8 @@ export async function readStyleHistory(rootDir) {
     }
     return parsed;
   } catch (error) {
-    if (isMissingError(error)) {
-      return {};
-    }
-    if (error instanceof AppError && error.code === 'STYLE_HISTORY_INVALID') {
-      throw error;
-    }
+    if (isMissingError(error)) return {};
+    if (error instanceof AppError && error.code === 'STYLE_HISTORY_INVALID') throw error;
     if (error instanceof SyntaxError) {
       throw new AppError('STYLE_HISTORY_INVALID', '风格历史无效', 422, { filePath });
     }
@@ -155,16 +336,12 @@ export async function resizeWithSips(sourcePath, targetPath) {
       settled = true;
       reject(syncFailed('风格代表图缩放失败'));
     };
-    const succeed = () => {
-      if (settled) return;
-      settled = true;
-      resolve();
-    };
 
     child.once('error', fail);
     child.once('close', (code) => {
       if (code === 0) {
-        succeed();
+        if (!settled) resolve();
+        settled = true;
         return;
       }
       fail();
@@ -181,6 +358,9 @@ export async function syncStylePreview({
   resizeImpl = resizeWithSips,
   accessImpl = access,
   renameImpl = rename,
+  copyFileImpl = copyFile,
+  unlinkImpl = unlink,
+  lockOptions = {},
 }) {
   const safeStyleId = assertStyleId(styleId);
   const outputs = assertOutputPaths(outputPaths);
@@ -196,37 +376,40 @@ export async function syncStylePreview({
   const historyFilePath = historyPath(rootDir);
   let tempPreviewPath;
   let tempHistoryPath;
-  let tempBackupPath;
-  let lockFilePath;
+  let backupPath;
+  let lock;
+  let preserveBackup = false;
+  let backupCreated = false;
+  let finalInstalled = false;
+  let historyCommitted = false;
 
   try {
     await accessImpl(sourcePath, constants.R_OK);
     await mkdir(previewDirectory, { recursive: true });
     await mkdir(controlDirectory, { recursive: true });
-    lockFilePath = await acquireStyleHistoryLock(rootDir);
+    lock = await acquireStyleHistoryLock(rootDir, lockOptions);
 
     tempPreviewPath = path.join(previewDirectory, `.${safeStyleId}.${randomUUID()}.jpg`);
     tempHistoryPath = path.join(controlDirectory, `.style-history.${randomUUID()}.json`);
-    tempBackupPath = path.join(previewDirectory, `.${safeStyleId}.${randomUUID()}.bak.jpg`);
+    backupPath = path.join(previewDirectory, `.${safeStyleId}.${randomUUID()}.bak.jpg`);
 
     const history = await readStyleHistory(rootDir);
-    let hasBackup = false;
-    let finalPreviewCreated = false;
 
     try {
+      await resizeImpl(sourcePath, tempPreviewPath);
+
       try {
         await accessImpl(finalPreviewPath, constants.F_OK);
-        await renameImpl(finalPreviewPath, tempBackupPath);
-        hasBackup = true;
+        await copyFileImpl(finalPreviewPath, backupPath);
+        backupCreated = true;
       } catch (error) {
         if (!isMissingError(error)) {
           throw syncFailed('风格代表图同步失败');
         }
       }
 
-      await resizeImpl(sourcePath, tempPreviewPath);
       await renameImpl(tempPreviewPath, finalPreviewPath);
-      finalPreviewCreated = true;
+      finalInstalled = true;
 
       const record = {
         styleId: safeStyleId,
@@ -239,34 +422,47 @@ export async function syncStylePreview({
 
       await writeFile(tempHistoryPath, `${JSON.stringify(nextHistory, null, 2)}\n`);
       await renameImpl(tempHistoryPath, historyFilePath);
+      historyCommitted = true;
 
-      await removeIfExists(tempBackupPath);
+      await removeIfExists(backupPath, unlinkImpl).catch(() => {});
       return record;
     } catch (error) {
-      if (tempPreviewPath) {
-        await removeIfExists(tempPreviewPath);
+      if (!historyCommitted) {
+        await Promise.allSettled([
+          tempPreviewPath ? removeIfExists(tempPreviewPath, unlinkImpl) : Promise.resolve(),
+          tempHistoryPath ? removeIfExists(tempHistoryPath, unlinkImpl) : Promise.resolve(),
+        ]);
+
+        if (finalInstalled && backupCreated) {
+          try {
+            await renameImpl(backupPath, finalPreviewPath);
+            backupCreated = false;
+          } catch {
+            preserveBackup = true;
+          }
+        } else if (finalInstalled) {
+          await removeIfExists(finalPreviewPath, unlinkImpl).catch(() => {});
+        } else if (backupCreated) {
+          await removeIfExists(backupPath, unlinkImpl).catch(() => {});
+          backupCreated = false;
+        }
       }
-      if (hasBackup) {
-        await restorePreview(renameImpl, tempBackupPath, finalPreviewPath);
-      } else if (finalPreviewCreated) {
-        await removeIfExists(finalPreviewPath);
-      }
-      if (error instanceof AppError) {
-        throw error;
-      }
+
+      if (error instanceof AppError) throw error;
       throw syncFailed('风格代表图同步失败');
     }
   } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
+    if (error instanceof AppError) throw error;
     throw syncFailed('风格代表图同步失败');
   } finally {
+    if (lock) {
+      await lock.release();
+    }
+
     await Promise.allSettled([
-      removeIfExists(lockFilePath),
-      tempPreviewPath ? unlink(tempPreviewPath) : Promise.resolve(),
-      tempHistoryPath ? unlink(tempHistoryPath) : Promise.resolve(),
-      tempBackupPath ? unlink(tempBackupPath) : Promise.resolve(),
+      tempPreviewPath ? removeIfExists(tempPreviewPath, unlinkImpl) : Promise.resolve(),
+      tempHistoryPath ? removeIfExists(tempHistoryPath, unlinkImpl) : Promise.resolve(),
+      backupPath && !preserveBackup ? removeIfExists(backupPath, unlinkImpl) : Promise.resolve(),
     ]);
   }
 }
