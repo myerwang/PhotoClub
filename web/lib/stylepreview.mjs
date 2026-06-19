@@ -25,6 +25,7 @@ const DEFAULT_LOCK_OPTIONS = {
   timeoutMs: 5_000,
   staleMs: 60_000,
 };
+const activeLeaseTokens = new Set();
 
 function inputInvalid(message) {
   return new AppError('STYLE_PREVIEW_INPUT_INVALID', message, 400);
@@ -208,7 +209,7 @@ async function readLockState(lockDirectory, fsOps) {
     return {
       kind: 'malformed',
       mtimeMs,
-      validPids: [...new Set(validLeases.map((lease) => lease.pid))],
+      validOwners: validLeases.map(({ ownerToken, pid }) => ({ ownerToken, pid })),
     };
   } catch (error) {
     if (isMissingError(error)) return null;
@@ -243,6 +244,7 @@ function startHeartbeat(lockDirectory, leasePath, ownerToken, pid, fsOps) {
 
   const markCompromised = () => {
     compromised = true;
+    activeLeaseTokens.delete(ownerToken);
     stopTimer();
   };
 
@@ -302,6 +304,11 @@ async function processIsAlive(fsOps, pid) {
   }
 }
 
+async function recordedOwnerIsActive(fsOps, { ownerToken, pid }) {
+  if (pid === process.pid) return activeLeaseTokens.has(ownerToken);
+  return processIsAlive(fsOps, pid);
+}
+
 async function removeLockDirectoryIfEmpty(lockDirectory, fsOps) {
   try {
     await fsOps.rmdirImpl(lockDirectory);
@@ -313,7 +320,7 @@ async function removeLockDirectoryIfEmpty(lockDirectory, fsOps) {
 }
 
 async function removeObservedLease(lockDirectory, observed, fsOps) {
-  if (!isPositiveInteger(observed.pid) || await processIsAlive(fsOps, observed.pid)) {
+  if (!isPositiveInteger(observed.pid) || await recordedOwnerIsActive(fsOps, observed)) {
     return false;
   }
 
@@ -321,7 +328,7 @@ async function removeObservedLease(lockDirectory, observed, fsOps) {
   if (
     !sameLease(confirmed, observed)
     || lockNow(fsOps).getTime() - confirmed.mtimeMs <= fsOps.staleMs
-    || await processIsAlive(fsOps, confirmed.pid)
+    || await recordedOwnerIsActive(fsOps, confirmed)
   ) {
     return false;
   }
@@ -341,8 +348,8 @@ async function removeObservedLease(lockDirectory, observed, fsOps) {
 }
 
 async function hasLiveRecordedProcess(state, fsOps) {
-  for (const pid of state.validPids ?? []) {
-    if (await processIsAlive(fsOps, pid)) return true;
+  for (const owner of state.validOwners ?? []) {
+    if (await recordedOwnerIsActive(fsOps, owner)) return true;
   }
   return false;
 }
@@ -401,16 +408,20 @@ async function acquireStyleHistoryLock(rootDir, lockOptions) {
       }
 
       const heartbeat = startHeartbeat(lockDirectory, leasePath, ownerToken, pid, fsOps);
+      activeLeaseTokens.add(ownerToken);
       let released = false;
       const release = async () => {
         if (released) return;
         released = true;
-        await heartbeat.stop();
+        activeLeaseTokens.delete(ownerToken);
         try {
+          await heartbeat.stop();
           const removed = await unlinkIfExists(leasePath, fsOps.unlinkImpl);
           if (removed) await removeLockDirectoryIfEmpty(lockDirectory, fsOps);
         } catch {
           // Best effort; stale recovery can clean up if needed.
+        } finally {
+          activeLeaseTokens.delete(ownerToken);
         }
       };
       return { assertOwned: heartbeat.assertOwned, ownerToken, pid, release };

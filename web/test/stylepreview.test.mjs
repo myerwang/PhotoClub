@@ -139,6 +139,15 @@ async function readLockLease(rootDir) {
   return JSON.parse(await readFile(path.join(lockDirectory, entry), 'utf8'));
 }
 
+async function writeLockLease(rootDir, ownerToken, pid) {
+  const lockDirectory = path.join(rootDir, '.control', 'style-history.lock');
+  await mkdir(lockDirectory, { recursive: true });
+  await writeFile(
+    path.join(lockDirectory, `${ownerToken}.json`),
+    JSON.stringify({ ownerToken, pid }),
+  );
+}
+
 async function readLockOwner(rootDir) {
   const lockFilePath = path.join(rootDir, '.control', 'style-history.lock');
   const lockStats = await stat(lockFilePath);
@@ -661,14 +670,71 @@ test('syncStylePreview release never deletes a replacement owner lock', async ()
   await removeLock(rootDir);
 });
 
-test('syncStylePreview stale takeover cannot remove a changed owner', async () => {
+test('syncStylePreview reclaims an abandoned same-process lease after release unlink fails', async () => {
   const rootDir = await createRoot();
   const firstSource = await writeOutput(rootDir, 'first.png', 'first');
   const secondSource = await writeOutput(rootDir, 'second.png', 'second');
+  const timing = createLockTiming();
+  let releaseFailures = 0;
+  let processChecks = 0;
+
+  const firstRecord = await syncStylePreview({
+    rootDir,
+    styleId: 'alpha',
+    outputPaths: [firstSource],
+    jobId: 'job-a',
+    lockOptions: {
+      unlinkImpl: async () => {
+        releaseFailures += 1;
+        const error = new Error('release unlink failed');
+        error.code = 'EACCES';
+        throw error;
+      },
+    },
+    resizeImpl: async (_sourcePath, targetPath) => {
+      await writeFile(targetPath, 'alpha');
+    },
+  });
+
+  const abandoned = await readLockLease(rootDir);
+  assert.equal(abandoned.pid, process.pid);
+  assert.equal(releaseFailures, 1);
+
+  const secondRecord = await syncStylePreview({
+    rootDir,
+    styleId: 'beta',
+    outputPaths: [secondSource],
+    jobId: 'job-b',
+    lockOptions: {
+      ...timing.options,
+      timeoutMs: 0,
+      statImpl: async (targetPath) => ({
+        ...await stat(targetPath),
+        mtimeMs: 0,
+      }),
+      processAliveImpl: async () => {
+        processChecks += 1;
+        return true;
+      },
+    },
+    resizeImpl: async (_sourcePath, targetPath) => {
+      await writeFile(targetPath, 'beta');
+    },
+  });
+
+  assert.equal(firstRecord.styleId, 'alpha');
+  assert.equal(secondRecord.styleId, 'beta');
+  assert.equal(processChecks, 0);
+  assert.deepEqual(Object.keys(await readStyleHistory(rootDir)).sort(), ['alpha', 'beta']);
+  assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
+  assert.equal(timing.timerCount, 0);
+});
+
+test('syncStylePreview stale takeover cannot remove a changed owner', async () => {
+  const rootDir = await createRoot();
+  const secondSource = await writeOutput(rootDir, 'second.png', 'second');
   const thirdSource = await writeOutput(rootDir, 'third.png', 'third');
   const timing = createLockTiming();
-  const firstStarted = deferred();
-  const firstCanFinish = deferred();
   const staleRemovalObserved = deferred();
   const allowStaleRemoval = deferred();
   const thirdStarted = deferred();
@@ -676,21 +742,7 @@ test('syncStylePreview stale takeover cannot remove a changed owner', async () =
   let secondStarted = false;
   let removalBlocked = false;
   let deadProcessChecks = 0;
-
-  const first = syncStylePreview({
-    rootDir,
-    styleId: 'alpha',
-    outputPaths: [firstSource],
-    jobId: 'job-a',
-    lockOptions: timing.options,
-    resizeImpl: async (_sourcePath, targetPath) => {
-      firstStarted.resolve();
-      await writeFile(targetPath, 'alpha');
-      await firstCanFinish.promise;
-    },
-  });
-  await firstStarted.promise;
-  timing.advance(40);
+  await writeLockLease(rootDir, 'stale-owner', 424_242);
 
   const second = syncStylePreview({
     rootDir,
@@ -704,7 +756,7 @@ test('syncStylePreview stale takeover cannot remove a changed owner', async () =
         mtimeMs: 0,
       }),
       processAliveImpl: async (pid) => {
-        assert.equal(pid, process.pid);
+        assert.equal(pid, 424_242);
         deadProcessChecks += 1;
         return false;
       },
@@ -724,8 +776,7 @@ test('syncStylePreview stale takeover cannot remove a changed owner', async () =
   });
   await staleRemovalObserved.promise;
 
-  firstCanFinish.resolve();
-  await first;
+  await removeLock(rootDir);
 
   const third = syncStylePreview({
     rootDir,
@@ -755,14 +806,14 @@ test('syncStylePreview stale takeover cannot remove a changed owner', async () =
 
   assert.equal(enteredWhileReplacementOwned, false);
   const history = await readStyleHistory(rootDir);
-  assert.deepEqual(Object.keys(history).sort(), ['alpha', 'beta', 'gamma']);
+  assert.deepEqual(Object.keys(history).sort(), ['beta', 'gamma']);
   assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
   assert.equal(timing.timerCount, 0);
-  assert.equal(timing.unrefCount, 3);
+  assert.equal(timing.unrefCount, 2);
   assert.ok(deadProcessChecks >= 1);
 });
 
-test('syncStylePreview live pid prevents stale removal after a heartbeat refresh', async () => {
+test('syncStylePreview protects an active same-process token even if process liveness reports dead', async () => {
   const rootDir = await createRoot();
   const firstSource = await writeOutput(rootDir, 'first.png', 'first');
   const secondSource = await writeOutput(rootDir, 'second.png', 'second');
@@ -771,14 +822,7 @@ test('syncStylePreview live pid prevents stale removal after a heartbeat refresh
   const firstCanFinish = deferred();
   const secondCanFinish = deferred();
   let secondStarted = false;
-  let refreshed = false;
-  let liveChecks = 0;
-
-  const refreshActiveLease = async () => {
-    if (refreshed) return;
-    refreshed = true;
-    await timing.heartbeatAll();
-  };
+  let processChecks = 0;
 
   const first = syncStylePreview({
     rootDir,
@@ -802,16 +846,13 @@ test('syncStylePreview live pid prevents stale removal after a heartbeat refresh
     jobId: 'job-b',
     lockOptions: {
       ...timing.options,
-      processAliveImpl: async (pid) => {
-        assert.equal(pid, process.pid);
-        liveChecks += 1;
-        if (liveChecks === 1) return false;
-        await refreshActiveLease();
-        return true;
-      },
-      unlinkImpl: async (targetPath) => {
-        if (targetPath.includes('style-history.lock')) await refreshActiveLease();
-        await unlink(targetPath);
+      statImpl: async (targetPath) => ({
+        ...await stat(targetPath),
+        mtimeMs: 0,
+      }),
+      processAliveImpl: async () => {
+        processChecks += 1;
+        return false;
       },
     },
     resizeImpl: async (_sourcePath, targetPath) => {
@@ -822,20 +863,26 @@ test('syncStylePreview live pid prevents stale removal after a heartbeat refresh
   });
 
   await waitFor(
-    () => refreshed && (secondStarted || timing.pendingSleeps > 0),
-    'contender did not evaluate the refreshed stale lease',
+    () => secondStarted || timing.pendingSleeps > 0,
+    'contender did not evaluate the stale active lease',
   );
   const overlapped = secondStarted;
 
   firstCanFinish.resolve();
-  await first;
+  let firstError;
+  try {
+    await first;
+  } catch (error) {
+    firstError = error;
+  }
   if (!secondStarted) timing.releaseNextSleep();
   await waitFor(() => secondStarted, 'second writer did not acquire after release');
   secondCanFinish.resolve();
   await second;
 
+  assert.equal(firstError, undefined);
   assert.equal(overlapped, false);
-  assert.ok(liveChecks >= 2);
+  assert.equal(processChecks, 0);
   assert.deepEqual(Object.keys(await readStyleHistory(rootDir)).sort(), ['alpha', 'beta']);
   assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
   assert.equal(timing.timerCount, 0);
