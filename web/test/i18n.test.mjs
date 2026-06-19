@@ -23,3 +23,10 @@ test('translates live dynamic interface text', () => {
   assert.equal(translate('en', 'count.stylesOne', { count: 1 }), '1 style');
   assert.equal(translate('zh', 'connection.retrying'), '事件连接正在重试');
 });
+
+test('translates explicit service shutdown controls', () => {
+  assert.equal(translate('zh', 'button.shutdown'), '关闭服务');
+  assert.equal(translate('ja', 'button.shutdown'), 'サービスを終了');
+  assert.equal(translate('en', 'button.shutdown'), 'Shut down service');
+  assert.match(translate('en', 'confirm.shutdown'), /running task/i);
+});

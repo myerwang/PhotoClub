@@ -249,8 +249,8 @@ test('network mode restarts the listener without losing queue state', async (t) 
   assert.equal(app.queue.snapshot().jobs[0].id, 'keep-job');
 });
 
-test('page reload reacquires during shutdown grace without stopping the server', async (t) => {
-  const { app, base } = await running({ releaseDelayMs: 20 });
+test('page reload releases and reacquires without stopping the server', async (t) => {
+  const { app, base } = await running();
   t.after(() => app.close());
   const owner = await acquire(base, 'before-reload');
   const released = await fetch(`${base}/api/lease/release`, {
@@ -262,4 +262,33 @@ test('page reload reacquires during shutdown grace without stopping the server',
   assert.ok(replacement.token);
   await new Promise((resolve) => setTimeout(resolve, 35));
   assert.equal((await fetch(`${base}/api/health`)).status, 200);
+});
+
+test('releasing a page never closes the service automatically', async (t) => {
+  const { app, base } = await running();
+  t.after(() => app.close());
+  const owner = await acquire(base, 'closing-page');
+  const released = await fetch(`${base}/api/lease/release`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ...owner, shutdown: true }),
+  });
+  assert.equal(released.status, 200);
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  assert.equal((await fetch(`${base}/api/health`)).status, 200);
+});
+
+test('an owner can explicitly shut down the service', async () => {
+  const { app, base } = await running();
+  const unauthorized = await fetch(`${base}/api/shutdown`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
+  });
+  assert.equal(unauthorized.status, 423);
+  const owner = await acquire(base, 'shutdown-page');
+  const response = await fetch(`${base}/api/shutdown`, {
+    method: 'POST', headers: auth(owner), body: '{}',
+  });
+  assert.equal(response.status, 202);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  await assert.rejects(fetch(`${base}/api/health`));
+  await app.close();
 });

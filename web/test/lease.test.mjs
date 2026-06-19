@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { LeaseManager } from '../lib/lease.mjs';
-import { ShutdownCoordinator } from '../lib/lifecycle.mjs';
 
 function clockLease() {
   let time = 1_000;
@@ -45,30 +44,4 @@ test('release ignores the wrong token', () => {
   assert.equal(lease.snapshot().status, 'owned');
   assert.equal(lease.release('browser-a', 'private-token'), true);
   assert.deepEqual(lease.snapshot(), { status: 'free' });
-});
-
-test('lifecycle requests shutdown after lease expiry', async () => {
-  const calls = [];
-  const timers = [];
-  const coordinator = new ShutdownCoordinator({
-    cancelWaiting: async () => calls.push('cancelWaiting'),
-    terminateActive: async () => {
-      calls.push('terminateActive');
-      return { running: true };
-    },
-    forceTerminate: async () => calls.push('forceTerminate'),
-    closeServer: async () => calls.push('closeServer'),
-    setTimeoutImpl: (callback, milliseconds) => {
-      timers.push({ callback, milliseconds });
-      return 1;
-    },
-  });
-
-  const started = await coordinator.shutdown('lease-expired');
-  assert.equal(started, true);
-  assert.deepEqual(calls, ['cancelWaiting', 'terminateActive', 'closeServer']);
-  assert.equal(timers[0].milliseconds, 5_000);
-  await timers[0].callback();
-  assert.deepEqual(calls, ['cancelWaiting', 'terminateActive', 'closeServer', 'forceTerminate']);
-  assert.equal(await coordinator.shutdown('again'), false);
 });

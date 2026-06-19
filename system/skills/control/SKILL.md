@@ -27,7 +27,8 @@ Operate the local control page through the Node server. Do not use the Codex in-
 - Never read, request, store, or pass `OPENAI_API_KEY`.
 - Keep `.control/server.json` private; it contains local process control data.
 - Allow one controlling page at a time. A second page remains occupied and cannot operate controls.
-- The controlling page sends a 5-second heartbeat. Page close requests shutdown; a missing heartbeat stops the service after 30 seconds.
+- The controlling page sends a 5-second heartbeat only to maintain its exclusive lease. Closing, hiding, or leaving the page and missing heartbeats must never stop the service or cancel tasks.
+- Stop the service only through the page's explicit shutdown button or the `--stop` command.
 - During generation, keep the page locked except for task status and cancellation.
 
 ## Commands

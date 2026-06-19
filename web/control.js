@@ -51,12 +51,13 @@ function renderLock() {
   const locked = state.busy || state.lease !== 'owned';
   document.body.classList.toggle('locked', locked);
   for (const element of document.querySelectorAll('input, textarea, select, button')) {
-    if (['language', 'cancel', 'help-open', 'help-close', 'loading-cancel'].includes(element.id)) continue;
+    if (['language', 'shutdown', 'cancel', 'help-open', 'help-close', 'loading-cancel'].includes(element.id)) continue;
     element.disabled = locked;
   }
   $('cancel').disabled = !state.busy;
   $('cancel').hidden = !state.busy;
   $('loading-cancel').disabled = !state.busy;
+  $('shutdown').disabled = state.lease !== 'owned';
 }
 
 function choice(kind, item, checked, mediaClass, imageUrl, label) {
@@ -166,6 +167,16 @@ async function cancelCurrentJob() {
   if (state.job) await api(`/api/jobs/${state.job.id}`, { method: 'DELETE' }).catch(showError);
 }
 
+async function shutdownService() {
+  if (!window.confirm(t('confirm.shutdown'))) return;
+  clearInterval(heartbeatTimer);
+  try {
+    await api('/api/shutdown', { method: 'POST', body: '{}' });
+    token = '';
+    setLease('offline');
+  } catch (error) { showError(error); }
+}
+
 async function submitGenerate() {
   clearError();
   const quantity = Number($('quantity').value);
@@ -256,6 +267,7 @@ async function start() {
 }
 
 $('language').addEventListener('change', (event) => applyLanguage(event.target.value));
+$('shutdown').addEventListener('click', shutdownService);
 $('generate').addEventListener('click', submitGenerate);
 $('quantity').addEventListener('input', clearError);
 $('orientations').addEventListener('change', (event) => {
@@ -286,7 +298,7 @@ $('lan-mode').addEventListener('change', async (event) => {
 });
 window.addEventListener('pagehide', () => {
   clearInterval(heartbeatTimer);
-  if (token) navigator.sendBeacon('/api/lease/release', JSON.stringify({ clientId, token, shutdown: true }));
+  if (token) navigator.sendBeacon('/api/lease/release', JSON.stringify({ clientId, token }));
 });
 
 applyLanguage(state.language);

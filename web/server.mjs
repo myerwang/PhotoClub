@@ -63,15 +63,13 @@ export function createControlServer({
   },
   now = Date.now,
   adminToken = randomUUID(),
-  releaseDelayMs = 1_500,
+  onClose = async () => {},
 } = {}) {
   if (!rootDir) throw new TypeError('rootDir is required');
   const lease = new LeaseManager({ now });
   const clients = new Set();
   let server = null;
   let current = null;
-  let leaseTimer = null;
-  let releaseTimer = null;
   let closed = false;
   const reservedProfileIds = new Set();
   const profileJobIds = new Map();
@@ -187,8 +185,6 @@ export function createControlServer({
       return sendJson(response, 200, await loadCatalog(rootDir));
     }
     if (request.method === 'POST' && pathname === '/api/lease/acquire') {
-      if (releaseTimer) clearTimeout(releaseTimer);
-      releaseTimer = null;
       return sendJson(response, 200, lease.acquire((await readJson(request)).clientId));
     }
     if (request.method === 'POST' && pathname === '/api/lease/heartbeat') {
@@ -199,14 +195,12 @@ export function createControlServer({
       const body = await readJson(request);
       const released = lease.release(body.clientId, body.token);
       sendJson(response, released ? 200 : 403, released ? { released: true } : errorPayload(new AppError('LEASE_INVALID', '租约无效', 403)));
-      if (released && body.shutdown) {
-        if (releaseTimer) clearTimeout(releaseTimer);
-        releaseTimer = setTimeout(() => {
-          releaseTimer = null;
-          if (lease.snapshot().status === 'free') api.close();
-        }, releaseDelayMs);
-        releaseTimer.unref?.();
-      }
+      return;
+    }
+    if (request.method === 'POST' && pathname === '/api/shutdown') {
+      requireOwner(request);
+      sendJson(response, 202, { shuttingDown: true });
+      setImmediate(() => api.close().catch(() => {}));
       return;
     }
     if (request.method === 'POST' && pathname === '/api/admin/release') {
@@ -383,16 +377,6 @@ export function createControlServer({
     });
     const address = server.address();
     current = { host, port: address.port, lan, url: `http://127.0.0.1:${address.port}` };
-    if (!leaseTimer) {
-      leaseTimer = setInterval(() => {
-        if (lease.expireIfNeeded()) {
-          queue.cancelWaiting();
-          queue.terminateActive();
-          api.close();
-        }
-      }, 5_000);
-      leaseTimer.unref?.();
-    }
     return current;
   }
 
@@ -409,15 +393,12 @@ export function createControlServer({
     async close() {
       if (closed) return;
       closed = true;
-      if (leaseTimer) clearInterval(leaseTimer);
-      leaseTimer = null;
-      if (releaseTimer) clearTimeout(releaseTimer);
-      releaseTimer = null;
       queue.cancelWaiting();
       queue.terminateActive();
       for (const response of clients) response.end();
       clients.clear();
       if (server?.listening) await new Promise((resolve) => server.close(resolve));
+      await onClose();
     },
   };
   return api;
@@ -446,7 +427,7 @@ async function main() {
   }
   const port = Number(optionValue(args, '--port', '0'));
   const adminToken = randomUUID();
-  const app = createControlServer({ rootDir, adminToken });
+  const app = createControlServer({ rootDir, adminToken, onClose: () => unlink(statePath).catch(() => {}) });
   const address = await app.listen({ port, lan: args.includes('--lan') });
   await mkdir(path.join(rootDir, '.control'), { recursive: true });
   await writeFile(statePath, JSON.stringify({ pid: process.pid, adminToken, ...address }, null, 2), { mode: 0o600 });
