@@ -1,0 +1,37 @@
+---
+style_id: disposablecamerabedroomportr
+name: Disposable Camera Bedroom Portrait
+thumbnail: disposablecamerabedroomportr.png
+source_url: https://github.com/gpt-image2/awesome-gptimage2-prompts
+source_title: gpt-image2/awesome-gptimage2-prompts
+source_result: 34
+retrieved_at: 2026-06-19T11:04:59.421Z
+---
+
+# Style: Disposable Camera Bedroom Portrait
+
+## Source Prompt
+
+A close-up candid portrait of a {argument name="subject" default="young woman"} indoors against a muted beige wall, shot in a 1990s disposable camera snapshot style. She has pale skin, a soft understated smirk, and loose {argument name="hair color" default="black"} hair with natural volume, slightly messy waves, and face-framing strands spreading around her shoulders. She wears a {argument name="top color" default="faded mauve"} oversized sweatshirt with a relaxed fit and softly gathered sleeves. The framing is chest-up and slightly off-center at eye level, with her body angled casually and one arm subtly extending forward as if taking the photo herself. Use direct on-camera flash for flat shadows, a dim ambient room, visible but subtle film grain, soft edge falloff, and a nostalgic casual vibe. The wall behind her is decorated with exactly 8 taped paper items: 4 instant photos, 2 concert flyers, 1 handwritten note, and 1 small dark photo print. One flyer references {argument name="band name" default="SONIC YOUTH"}, another references {argument name="second band name" default="NIRVANA"}. The overall image should feel intimate, imperfect, slightly grainy, and authentically analog.
+
+## Adaptation Log
+
+- 删除固定姓名、公众人物、性别、年龄、族裔、职业、人数及五官文字描述，人物身份和组合由所选人物参考决定。
+- 删除固定分辨率、纵横比、品牌、文案、水印及平台参数；保留来源明确给出的摄影媒介、服装语言、环境、动作、构图、灯光和后期质感。
+
+## Visual Rules
+
+- 采用来源 prompts.json 条目 15255“Disposable Camera Bedroom Portrait”明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。
+
+## Composition
+
+- 采用来源提示词明确指定的景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。
+
+## Lighting And Color
+
+- 采用来源提示词明确指定的光源、色温、曝光、色彩关系和相机或胶片质感。
+
+## Subject Boundary
+
+- Apply `system/rules/style_base.md`.
+- This style defines visual treatment only and does not restrict subject identity, attributes, count, or combinations.

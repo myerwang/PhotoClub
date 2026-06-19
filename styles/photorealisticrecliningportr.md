@@ -1,0 +1,37 @@
+---
+style_id: photorealisticrecliningportr
+name: Photorealistic Reclining Portrait
+thumbnail: photorealisticrecliningportr.png
+source_url: https://github.com/gpt-image2/awesome-gptimage2-prompts
+source_title: gpt-image2/awesome-gptimage2-prompts
+source_result: 34
+retrieved_at: 2026-06-19T11:04:59.421Z
+---
+
+# Style: Photorealistic Reclining Portrait
+
+## Source Prompt
+
+A highly detailed, photorealistic portrait of a {argument name="subject description" default="beautiful young Asian woman"} reclining gracefully on a {argument name="furniture" default="white modern sofa"}. She is wearing a {argument name="clothing" default="short white silk slip dress"} with thin straps, her {argument name="hair style" default="long wavy dark brown hair"} cascading softly over a white pillow. Her pose is relaxed and intimate, with one arm raised elegantly above her head and the other hand resting gently on her stomach, as she gazes directly at the camera with a soft, alluring expression. The scene is illuminated by {argument name="lighting style" default="soft natural sunlight streaming through a window"}, casting gentle, diffused shadows across her flawless skin and the pristine white upholstery. The aesthetic is bright, minimalist, and ethereal, captured with an 85mm lens for a cinematic, shallow depth of field and soft, glowing highlights.
+
+## Adaptation Log
+
+- 删除固定姓名、公众人物、性别、年龄、族裔、职业、人数及五官文字描述，人物身份和组合由所选人物参考决定。
+- 删除固定分辨率、纵横比、品牌、文案、水印及平台参数；保留来源明确给出的摄影媒介、服装语言、环境、动作、构图、灯光和后期质感。
+
+## Visual Rules
+
+- 采用来源 prompts.json 条目 13448“Photorealistic Reclining Portrait”明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。
+
+## Composition
+
+- 采用来源提示词明确指定的景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。
+
+## Lighting And Color
+
+- 采用来源提示词明确指定的光源、色温、曝光、色彩关系和相机或胶片质感。
+
+## Subject Boundary
+
+- Apply `system/rules/style_base.md`.
+- This style defines visual treatment only and does not restrict subject identity, attributes, count, or combinations.
