@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test web/test/*.test.mjs",
-    "start": "node web/server.mjs"
+    "start": "node web/server.mjs",
+    "stylebatch": "node system/tools/stylebatch.mjs"
   }
 }
