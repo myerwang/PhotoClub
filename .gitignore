@@ -8,7 +8,7 @@ output/*
 !output/README.md
 
 .control/
-hold/
+work/
 
 profiles/*
 !profiles/README.md
