@@ -9,47 +9,48 @@
 <body>
   <header class="topbar">
     <div>
-      <h1>同框照相馆</h1>
+      <h1 data-i18n="app.title">同框照相馆</h1>
       <p id="connection" class="status" data-testid="connection">正在连接</p>
     </div>
     <div class="top-actions">
-      <label class="toggle"><input id="lan-mode" type="checkbox" data-testid="lan-mode"> 局域网访问</label>
-      <button id="help-open" type="button" class="secondary" data-testid="help-open">使用说明</button>
+      <label class="language-picker"><span data-i18n="language.label">语言</span><select id="language" aria-label="语言切换" data-i18n-aria-label="aria.language" data-testid="language"><option value="zh">中文</option><option value="ja">日本語</option><option value="en">English</option></select></label>
+      <label class="toggle"><input id="lan-mode" type="checkbox" data-testid="lan-mode"> <span data-i18n="nav.lan">局域网访问</span></label>
+      <button id="help-open" type="button" class="secondary" data-testid="help-open" data-i18n="nav.help">使用说明</button>
     </div>
   </header>
 
   <main>
     <section aria-labelledby="profile-title">
-      <div class="section-heading"><h2 id="profile-title">人物</h2><span class="section-tools"><span id="profile-count"></span><button id="profile-open" type="button" class="compact-button" data-testid="profile-open">人物设定</button></span></div>
+      <div class="section-heading"><h2 id="profile-title" data-i18n="section.people">人物</h2><span class="section-tools"><span id="profile-count"></span><button id="profile-open" type="button" class="compact-button" data-testid="profile-open" data-i18n="button.profile">人物设定</button></span></div>
       <div id="profiles" class="profile-grid" data-testid="profiles"></div>
     </section>
 
     <section aria-labelledby="style-title">
-      <div class="section-heading"><h2 id="style-title">风格</h2><span id="style-count"></span></div>
+      <div class="section-heading"><h2 id="style-title" data-i18n="section.styles">风格</h2><span id="style-count"></span></div>
       <div id="styles" class="style-grid" data-testid="styles"></div>
     </section>
 
     <div class="operation-column">
       <section class="settings" aria-labelledby="settings-title">
-        <h2 id="settings-title">输出设置</h2>
-        <fieldset><legend>打印格式</legend><div id="formats" class="segments" data-testid="formats"></div></fieldset>
-        <fieldset><legend>照片方向</legend><div id="orientations" class="segments" data-testid="orientations">
-          <label class="segment"><input type="radio" name="orientation" value="portrait" checked><span>纵向</span></label>
-          <label class="segment"><input type="radio" name="orientation" value="landscape"><span>横向</span></label>
+        <h2 id="settings-title" data-i18n="section.settings">输出设置</h2>
+        <fieldset><legend data-i18n="field.printFormat">打印格式</legend><div id="formats" class="segments" data-testid="formats"></div></fieldset>
+        <fieldset><legend data-i18n="field.orientation">照片方向</legend><div id="orientations" class="segments" data-testid="orientations">
+          <label class="segment"><input type="radio" name="orientation" value="portrait" checked><span data-i18n="field.portrait">纵向</span></label>
+          <label class="segment"><input type="radio" name="orientation" value="landscape"><span data-i18n="field.landscape">横向</span></label>
         </div></fieldset>
-        <label for="prompt">额外要求</label>
-        <textarea id="prompt" maxlength="4000" rows="4" placeholder="仅用于本次生成，不会写入风格规则" data-testid="prompt"></textarea>
-        <label class="quantity-field" for="quantity">生成数量 <input id="quantity" type="number" min="1" max="20" step="1" value="1" inputmode="numeric" data-testid="quantity"></label>
+        <label for="prompt" data-i18n="field.extraPrompt">额外要求</label>
+        <textarea id="prompt" maxlength="4000" rows="4" placeholder="仅用于本次生成，不会写入风格规则" data-i18n-placeholder="field.extraPromptPlaceholder" data-testid="prompt"></textarea>
+        <label class="quantity-field" for="quantity"><span data-i18n="field.quantity">生成数量</span> <input id="quantity" type="number" min="1" max="20" step="1" value="1" inputmode="numeric" data-testid="quantity"></label>
         <div class="generate-row">
-          <button id="generate" type="button" class="primary" data-testid="generate">生成照片</button>
-          <button id="open-output" type="button" class="secondary" data-testid="open-output">打开输出文件夹</button>
+          <button id="generate" type="button" class="primary" data-testid="generate" data-i18n="button.generate">生成照片</button>
+          <button id="open-output" type="button" class="secondary" data-testid="open-output" data-i18n="button.openOutput">打开输出文件夹</button>
           <span id="selection-summary" class="muted"></span>
         </div>
       </section>
 
       <section class="task-panel" aria-labelledby="task-title">
-        <div class="section-heading"><h2 id="task-title">任务与结果</h2><button id="cancel" type="button" class="danger" hidden data-testid="cancel">取消任务</button></div>
-        <div id="task-state" class="task-state" data-testid="task-state">暂无任务</div>
+        <div class="section-heading"><h2 id="task-title" data-i18n="section.tasks">任务与结果</h2><button id="cancel" type="button" class="danger" hidden data-testid="cancel" data-i18n="button.cancelJob">取消任务</button></div>
+        <div id="task-state" class="task-state" data-testid="task-state" data-i18n="task.none">暂无任务</div>
         <div id="error" class="error" hidden role="alert" data-testid="error"></div>
         <div id="result" class="result" data-testid="result"></div>
       </section>
@@ -58,46 +59,46 @@
 
   <dialog id="profile-dialog" data-testid="profile-dialog">
     <form id="profile-form">
-      <div class="dialog-heading"><h2>生成人物设定</h2><button id="profile-close" type="button" class="icon-button" aria-label="关闭">×</button></div>
+      <div class="dialog-heading"><h2 data-i18n="profile.dialogTitle">生成人物设定</h2><button id="profile-close" type="button" class="icon-button" aria-label="关闭" data-i18n-aria-label="aria.close">×</button></div>
       <fieldset>
-        <legend>设定方式</legend>
+        <legend data-i18n="profile.method">设定方式</legend>
         <div class="segments profile-methods">
-          <label class="segment"><input type="radio" name="profile-method" value="photos" checked><span>照片目录</span></label>
-          <label class="segment"><input type="radio" name="profile-method" value="prompt"><span>文字描述</span></label>
+          <label class="segment"><input type="radio" name="profile-method" value="photos" checked><span data-i18n="profile.photos">照片目录</span></label>
+          <label class="segment"><input type="radio" name="profile-method" value="prompt"><span data-i18n="profile.prompt">文字描述</span></label>
         </div>
       </fieldset>
       <div id="profile-photos-fields" class="profile-fields">
-        <label for="input-id">输入目录</label>
+        <label for="input-id" data-i18n="profile.input">输入目录</label>
         <select id="input-id" data-testid="input-id"></select>
-        <p class="muted">使用目录内全部照片生成一张胸像多视图。同名结果将直接覆盖。</p>
+        <p class="muted" data-i18n="profile.photosHint">使用目录内全部照片生成一张胸像多视图。同名结果将直接覆盖。</p>
       </div>
       <div id="profile-prompt-fields" class="profile-fields" hidden>
-        <label for="profile-name">人物名称（可选）</label>
-        <input id="profile-name" maxlength="40" autocomplete="off" placeholder="留空则由 AI 识别或命名" data-testid="profile-name">
-        <label for="profile-prompt">人物描述</label>
-        <textarea id="profile-prompt" maxlength="4000" placeholder="例如：某位真实人物；或一位来自外星文明的虚构电影人物……" data-testid="profile-prompt"></textarea>
-        <p class="muted">系统会先判断是否为真实人物。真实人物先检索公开参考图；虚构人物直接按描述生成。</p>
+        <label for="profile-name" data-i18n="profile.name">人物名称（可选）</label>
+        <input id="profile-name" maxlength="40" autocomplete="off" placeholder="留空则由 AI 识别或命名" data-i18n-placeholder="profile.namePlaceholder" data-testid="profile-name">
+        <label for="profile-prompt" data-i18n="profile.description">人物描述</label>
+        <textarea id="profile-prompt" maxlength="4000" placeholder="例如：某位真实人物；或一位来自外星文明的虚构电影人物……" data-i18n-placeholder="profile.descriptionPlaceholder" data-testid="profile-prompt"></textarea>
+        <p class="muted" data-i18n="profile.promptHint">系统会先判断是否为真实人物。真实人物先检索公开参考图；虚构人物直接按描述生成。</p>
       </div>
-      <div class="dialog-actions spread"><button id="open-input" type="button" class="secondary" data-testid="open-input">打开输入文件夹</button><span class="dialog-action-group"><button id="profile-cancel" type="button" class="secondary">取消</button><button id="profile-generate" type="button" class="primary" data-testid="profile-generate">开始生成</button></span></div>
+      <div class="dialog-actions spread"><button id="open-input" type="button" class="secondary" data-testid="open-input" data-i18n="button.openInput">打开输入文件夹</button><span class="dialog-action-group"><button id="profile-cancel" type="button" class="secondary" data-i18n="button.cancel">取消</button><button id="profile-generate" type="button" class="primary" data-testid="profile-generate" data-i18n="button.start">开始生成</button></span></div>
     </form>
   </dialog>
 
   <dialog id="help-dialog" data-testid="help-dialog">
     <div class="help-content">
-      <div class="dialog-heading"><h2>使用说明</h2><button id="help-close" type="button" class="icon-button" aria-label="关闭使用说明">×</button></div>
+      <div class="dialog-heading"><h2 data-i18n="help.title">使用说明</h2><button id="help-close" type="button" class="icon-button" aria-label="关闭使用说明" data-i18n-aria-label="aria.closeHelp">×</button></div>
       <ol class="help-steps">
-        <li>人物设定：可使用 <code>input/名称/</code> 内的多张照片，或输入真实、虚构人物描述，生成一张人物多视图。</li>
-        <li>生成照片：选择一个或多个人物、风格、打印格式、照片方向和数量，可填写本次额外要求。</li>
-        <li>查看结果：生成完成后在右栏预览，或打开输出文件夹。</li>
+        <li data-i18n="help.step1">人物设定：可使用 input/名称/ 内的多张照片，或输入真实、虚构人物描述，生成一张人物多视图。</li>
+        <li data-i18n="help.step2">生成照片：选择一个或多个人物、风格、打印格式、照片方向和数量，可填写本次额外要求。</li>
+        <li data-i18n="help.step3">查看结果：生成完成后点击结果可预览大图，或打开输出文件夹。</li>
       </ol>
-      <p class="muted">生成期间页面会锁定；任务状态和取消按钮保持可用。</p>
+      <p class="muted" data-i18n="help.lock">生成期间页面会锁定；全屏加载层中的取消按钮保持可用。</p>
     </div>
   </dialog>
 
   <dialog id="result-dialog" class="result-dialog" data-testid="result-dialog">
     <div class="result-dialog-content">
-      <button id="result-dialog-close" type="button" class="result-dialog-close" aria-label="关闭大图预览">×</button>
-      <img id="result-dialog-image" alt="生成结果大图预览">
+      <button id="result-dialog-close" type="button" class="result-dialog-close" aria-label="关闭大图预览" data-i18n-aria-label="aria.closePreview">×</button>
+      <img id="result-dialog-image" alt="生成结果大图预览" data-i18n-alt="result.previewGeneric">
     </div>
   </dialog>
 
@@ -105,8 +106,8 @@
     <div class="loading-stage">
       <div class="loading-spinner" aria-hidden="true"></div>
       <h2 id="loading-title">正在生成照片</h2>
-      <p id="loading-status">正在准备任务<span class="loading-dots" aria-hidden="true"><span></span><span></span><span></span></span></p>
-      <button id="loading-cancel" type="button" class="loading-cancel">取消任务</button>
+      <p id="loading-status"><span id="loading-status-text">正在准备任务</span><span class="loading-dots" aria-hidden="true"><span></span><span></span><span></span></span></p>
+      <button id="loading-cancel" type="button" class="loading-cancel" data-i18n="button.cancelJob">取消任务</button>
     </div>
   </div>
   <script type="module" src="/control.js"></script>

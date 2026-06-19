@@ -48,6 +48,15 @@ test('health and catalog return JSON', async (t) => {
   assert.equal(catalog.styles[0].id, 'sticker');
 });
 
+test('serves the browser translation module as JavaScript', async (t) => {
+  const { app, base } = await running();
+  t.after(() => app.close());
+  const response = await fetch(`${base}/i18n.mjs`);
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type'), /^text\/javascript/);
+  assert.match(await response.text(), /export function translate/);
+});
+
 test('job creation requires the active lease', async (t) => {
   const { app, base } = await running();
   t.after(() => app.close());

@@ -1,22 +1,30 @@
+import { LANGUAGE_LOCALES, normalizeLanguage, translate } from './i18n.mjs';
+
+function savedLanguage() {
+  try { return localStorage.getItem('photoclub.language'); } catch { return null; }
+}
+
 const state = {
   lease: 'connecting', busy: false, catalog: null,
   selection: { profileIds: [], styleId: '', formatId: '', orientation: 'portrait', prompt: '', quantity: 1 },
-  job: null, resultUrls: [],
+  job: null, resultUrls: [], language: normalizeLanguage(savedLanguage()),
 };
 
 const clientId = crypto.randomUUID();
 let token = '';
 let heartbeatTimer;
 const $ = (id) => document.getElementById(id);
+const t = (key, variables = {}, fallback = '') => translate(state.language, key, variables, fallback);
 
-function errorMessage(error, fallback = '操作失败') {
-  return error?.error?.message || error?.message || fallback;
+function errorMessage(error) {
+  const code = error?.error?.code || error?.code || 'UNKNOWN_ERROR';
+  return t(`error.${code}`, {}, error?.error?.message || error?.message || t('error.UNKNOWN_ERROR'));
 }
 
-function showError(error, suggestion = '请检查选择后重试。') {
+function showError(error, suggestionKey = 'suggestion.default') {
   const node = $('error');
   const code = error?.error?.code || error?.code || 'UNKNOWN_ERROR';
-  node.textContent = `${errorMessage(error)}（${code}） ${suggestion}`;
+  node.textContent = `${errorMessage(error)} (${code}) ${t(suggestionKey)}`;
   node.hidden = false;
 }
 
@@ -35,7 +43,7 @@ function setLease(status) {
   state.lease = status;
   const node = $('connection');
   node.className = `status ${status}`;
-  node.textContent = ({ owned: '已连接，可操作', occupied: '控制台正被其他页面使用', offline: '连接已断开', connecting: '正在连接' })[status] || status;
+  node.textContent = t(`connection.${status}`, {}, status);
   renderLock();
 }
 
@@ -43,7 +51,7 @@ function renderLock() {
   const locked = state.busy || state.lease !== 'owned';
   document.body.classList.toggle('locked', locked);
   for (const element of document.querySelectorAll('input, textarea, select, button')) {
-    if (['cancel', 'help-open', 'help-close', 'loading-cancel'].includes(element.id)) continue;
+    if (['language', 'cancel', 'help-open', 'help-close', 'loading-cancel'].includes(element.id)) continue;
     element.disabled = locked;
   }
   $('cancel').disabled = !state.busy;
@@ -76,8 +84,8 @@ function choice(kind, item, checked, mediaClass, imageUrl, label) {
   const wrapper = document.createElement('div'); wrapper.className = 'choice-wrap';
   const footer = document.createElement('div'); footer.className = 'choice-footer';
   const remove = document.createElement('button');
-  remove.type = 'button'; remove.className = 'profile-delete'; remove.textContent = '删除';
-  remove.title = `删除人物 ${item.id}`; remove.setAttribute('aria-label', `删除人物 ${item.id}`);
+  remove.type = 'button'; remove.className = 'profile-delete'; remove.textContent = t('button.delete');
+  remove.title = t('aria.deleteProfile', { name: item.id }); remove.setAttribute('aria-label', remove.title);
   remove.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); deleteProfile(item.id); });
   footer.append(name, remove);
   wrapper.append(element, footer);
@@ -90,10 +98,10 @@ function renderCatalog() {
   if (!state.selection.profileIds.length && profiles.length) state.selection.profileIds = [profiles[0].id];
   if (!styles.some((item) => item.id === state.selection.styleId)) state.selection.styleId = styles[0]?.id || '';
   if (!formats.some((item) => item.id === state.selection.formatId)) state.selection.formatId = formats[0]?.id || '';
-  $('profile-count').textContent = `${profiles.length} 人`;
-  $('style-count').textContent = `${styles.length} 种`;
-  $('profiles').replaceChildren(...(profiles.length ? profiles.map((item) => choice('profile', item, state.selection.profileIds.includes(item.id), 'profile-media', item.imageUrl, item.id)) : [empty('尚无可用人物设定') ]));
-  $('styles').replaceChildren(...(styles.length ? styles.map((item) => choice('style', item, item.id === state.selection.styleId, 'style-media', item.thumbnailUrl, item.name)) : [empty('尚无有效风格') ]));
+  $('profile-count').textContent = t(profiles.length === 1 ? 'count.peopleOne' : 'count.people', { count: profiles.length });
+  $('style-count').textContent = t(styles.length === 1 ? 'count.stylesOne' : 'count.styles', { count: styles.length });
+  $('profiles').replaceChildren(...(profiles.length ? profiles.map((item) => choice('profile', item, state.selection.profileIds.includes(item.id), 'profile-media', item.imageUrl, item.id)) : [empty(t('empty.profiles'))]));
+  $('styles').replaceChildren(...(styles.length ? styles.map((item) => choice('style', item, item.id === state.selection.styleId, 'style-media', item.thumbnailUrl, styleLabel(item))) : [empty(t('empty.styles'))]));
   $('formats').replaceChildren(...formats.map((item) => {
     const label = document.createElement('label'); label.className = 'segment';
     const input = document.createElement('input'); input.type = 'radio'; input.name = 'format'; input.value = item.id; input.checked = item.id === state.selection.formatId;
@@ -105,16 +113,19 @@ function renderCatalog() {
     label.append(input, span); return label;
   }));
   $('input-id').replaceChildren(...inputs.map((item) => new Option(item.id, item.id)));
-  if (issues.length) showError({ error: issues[0] }, '对应风格已停用，请补齐配置。');
+  if (issues.length) showError({ error: issues[0] }, 'suggestion.style');
   renderSummary(); renderLock();
 }
 
 function empty(text) { const node = document.createElement('div'); node.className = 'empty'; node.textContent = text; return node; }
 
+function styleLabel(item) { return t(`style.${item.id}`, {}, item.name); }
+
 function renderSummary() {
-  const style = state.catalog?.styles.find((item) => item.id === state.selection.styleId)?.name || '未选风格';
-  const people = state.selection.profileIds.length ? state.selection.profileIds.join(' + ') : '未选人物';
-  const orientation = state.selection.orientation === 'landscape' ? '横向' : '纵向';
+  const selectedStyle = state.catalog?.styles.find((item) => item.id === state.selection.styleId);
+  const style = selectedStyle ? styleLabel(selectedStyle) : t('summary.noStyle');
+  const people = state.selection.profileIds.length ? state.selection.profileIds.join(' + ') : t('summary.noPeople');
+  const orientation = t(state.selection.orientation === 'landscape' ? 'field.landscape' : 'field.portrait');
   $('selection-summary').textContent = `${people} / ${style} / ${orientation}`;
 }
 
@@ -123,12 +134,11 @@ async function refreshCatalog() { state.catalog = await api('/api/catalog'); ren
 function handleJob(job) {
   if (state.job && job.id !== state.job.id) return;
   state.job = job;
-  const labels = { queued: '等待执行', running: '正在生成', succeeded: '生成完成', failed: '生成失败', cancelled: '已取消' };
-  $('task-state').textContent = `${job.type === 'profile' ? '人物设定' : '照片生成'}：${labels[job.status] || job.status}`;
+  $('task-state').textContent = `${t(job.type === 'profile' ? 'task.profile' : 'task.generate')}: ${t(`status.${job.status}`, {}, job.status)}`;
   state.busy = ['queued', 'running'].includes(job.status);
   $('loading-overlay').hidden = !state.busy;
-  $('loading-title').textContent = job.type === 'profile' ? '正在生成人物设定' : '正在生成照片';
-  $('loading-status').firstChild.textContent = job.status === 'queued' ? '等待执行' : '图像生成中';
+  $('loading-title').textContent = t(job.type === 'profile' ? 'loading.profile' : 'loading.generate');
+  $('loading-status-text').textContent = t(job.status === 'queued' ? 'loading.queued' : 'loading.running');
   if (job.status === 'succeeded') {
     clearError();
     const outputUrls = job.result?.outputUrls ?? (job.result?.outputUrl ? [job.result.outputUrl] : []);
@@ -136,19 +146,19 @@ function handleJob(job) {
       state.resultUrls = outputUrls.map((outputUrl) => `${outputUrl}?v=${Date.now()}`);
       $('result').replaceChildren(...state.resultUrls.map((resultUrl, index) => {
         const button = document.createElement('button'); button.type = 'button'; button.className = 'result-preview';
-        button.setAttribute('aria-label', `查看生成结果 ${index + 1} 大图`);
-        const image = new Image(); image.src = resultUrl; image.alt = `生成结果 ${index + 1}`;
+        button.setAttribute('aria-label', t('aria.viewResult', { index: index + 1 }));
+        const image = new Image(); image.src = resultUrl; image.alt = t('result.alt', { index: index + 1 });
         button.append(image);
         button.addEventListener('click', () => {
           $('result-dialog-image').src = resultUrl;
-          $('result-dialog-image').alt = `生成结果 ${index + 1} 大图预览`;
+          $('result-dialog-image').alt = t('result.previewAlt', { index: index + 1 });
           $('result-dialog').showModal();
         });
         return button;
       }));
     }
     refreshCatalog().catch(showError);
-  } else if (job.status === 'failed') showError(job.error, '展开任务状态并检查输入文件。');
+  } else if (job.status === 'failed') showError(job.error, 'suggestion.job');
   renderLock();
 }
 
@@ -159,8 +169,8 @@ async function cancelCurrentJob() {
 async function submitGenerate() {
   clearError();
   const quantity = Number($('quantity').value);
-  if (!state.selection.profileIds.length || !state.selection.styleId || !state.selection.formatId) return showError({ code: 'SELECTION_REQUIRED', message: '请至少选择一个人物，并完整选择风格和格式' });
-  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 20) return showError({ code: 'QUANTITY_INVALID', message: '生成数量必须是 1 到 20 的整数' });
+  if (!state.selection.profileIds.length || !state.selection.styleId || !state.selection.formatId) return showError({ code: 'SELECTION_REQUIRED' });
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 20) return showError({ code: 'QUANTITY_INVALID' });
   try {
     state.selection.quantity = quantity;
     state.job = await api('/api/jobs/generate', { method: 'POST', body: JSON.stringify({ ...state.selection, extraPrompt: $('prompt').value, quantity }) });
@@ -174,7 +184,7 @@ async function submitProfile() {
   try {
     if (method === 'prompt') {
       const description = $('profile-prompt').value.trim();
-      if (!description) return showError({ code: 'PROFILE_PROMPT_REQUIRED', message: '请输入人物描述' });
+      if (!description) return showError({ code: 'PROFILE_PROMPT_REQUIRED' });
       state.job = await api('/api/jobs/profile-prompt', {
         method: 'POST',
         body: JSON.stringify({ name: $('profile-name').value.trim(), description }),
@@ -183,17 +193,41 @@ async function submitProfile() {
       state.job = await api('/api/jobs/profile', { method: 'POST', body: JSON.stringify({ inputId: $('input-id').value }) });
     }
     $('profile-dialog').close(); state.busy = true; handleJob(state.job);
-  } catch (error) { showError(error, method === 'photos' ? '请确认 input 目录内存在可用图片。' : '请检查人物名称和描述。'); }
+  } catch (error) { showError(error, method === 'photos' ? 'suggestion.photos' : 'suggestion.prompt'); }
 }
 
 async function deleteProfile(profileId) {
   clearError();
-  if (!window.confirm(`确定删除人物“${profileId}”吗？\n只删除人物多视图，不删除 input 原始照片。`)) return;
+  if (!window.confirm(t('confirm.deleteProfile', { name: profileId }))) return;
   try {
     await api(`/api/profiles/${encodeURIComponent(profileId)}`, { method: 'DELETE' });
     state.selection.profileIds = state.selection.profileIds.filter((id) => id !== profileId);
     await refreshCatalog();
-  } catch (error) { showError(error, '请刷新人物列表后重试。'); }
+  } catch (error) { showError(error, 'suggestion.refresh'); }
+}
+
+function applyLanguage(language) {
+  state.language = normalizeLanguage(language);
+  try { localStorage.setItem('photoclub.language', state.language); } catch { /* Storage can be disabled. */ }
+  document.documentElement.lang = LANGUAGE_LOCALES[state.language];
+  document.title = t('app.title');
+  for (const element of document.querySelectorAll('[data-i18n]')) element.textContent = t(element.dataset.i18n);
+  for (const element of document.querySelectorAll('[data-i18n-placeholder]')) element.placeholder = t(element.dataset.i18nPlaceholder);
+  for (const element of document.querySelectorAll('[data-i18n-aria-label]')) element.setAttribute('aria-label', t(element.dataset.i18nAriaLabel));
+  for (const element of document.querySelectorAll('[data-i18n-alt]')) element.alt = t(element.dataset.i18nAlt);
+  $('language').value = state.language;
+  setLease(state.lease);
+  if (state.catalog) renderCatalog();
+  if (state.job) {
+    $('task-state').textContent = `${t(state.job.type === 'profile' ? 'task.profile' : 'task.generate')}: ${t(`status.${state.job.status}`, {}, state.job.status)}`;
+    $('loading-title').textContent = t(state.job.type === 'profile' ? 'loading.profile' : 'loading.generate');
+    $('loading-status-text').textContent = t(state.job.status === 'queued' ? 'loading.queued' : 'loading.running');
+  }
+  for (const [index, button] of [...document.querySelectorAll('.result-preview')].entries()) {
+    button.setAttribute('aria-label', t('aria.viewResult', { index: index + 1 }));
+    const image = button.querySelector('img');
+    if (image) image.alt = t('result.alt', { index: index + 1 });
+  }
 }
 
 function setProfileMethod(method) {
@@ -211,16 +245,17 @@ async function start() {
     await refreshCatalog();
     const events = new EventSource('/api/events');
     events.onmessage = (event) => handleJob(JSON.parse(event.data).job);
-    events.onerror = () => { if (state.lease === 'owned') $('connection').textContent = '事件连接正在重试'; };
+    events.onerror = () => { if (state.lease === 'owned') $('connection').textContent = t('connection.retrying'); };
     heartbeatTimer = setInterval(async () => {
       try {
         const result = await api('/api/lease/heartbeat', { method: 'POST', body: JSON.stringify({ clientId, token }) });
         if (result.status !== 'owned') setLease('occupied');
       } catch { setLease('offline'); }
     }, 5_000);
-  } catch (error) { setLease('offline'); showError(error, '请重新启动控制台。'); }
+  } catch (error) { setLease('offline'); showError(error, 'suggestion.restart'); }
 }
 
+$('language').addEventListener('change', (event) => applyLanguage(event.target.value));
 $('generate').addEventListener('click', submitGenerate);
 $('quantity').addEventListener('input', clearError);
 $('orientations').addEventListener('change', (event) => {
@@ -246,7 +281,7 @@ $('result-dialog').addEventListener('click', (event) => { if (event.target === $
 $('open-output').addEventListener('click', () => api('/api/open-output', { method: 'POST', body: '{}' }).catch(showError));
 $('open-input').addEventListener('click', () => api('/api/open-input', { method: 'POST', body: '{}' }).catch(showError));
 $('lan-mode').addEventListener('change', async (event) => {
-  try { await api('/api/network', { method: 'POST', body: JSON.stringify({ lan: event.target.checked }) }); $('connection').textContent = '正在切换网络模式'; }
+  try { await api('/api/network', { method: 'POST', body: JSON.stringify({ lan: event.target.checked }) }); $('connection').textContent = t('connection.switching'); }
   catch (error) { event.target.checked = !event.target.checked; showError(error); }
 });
 window.addEventListener('pagehide', () => {
@@ -254,4 +289,5 @@ window.addEventListener('pagehide', () => {
   if (token) navigator.sendBeacon('/api/lease/release', JSON.stringify({ clientId, token, shutdown: true }));
 });
 
+applyLanguage(state.language);
 start();

@@ -39,7 +39,7 @@ async function readJson(request) {
 function contentType(filePath) {
   return ({
     '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
-    '.js': 'text/javascript; charset=utf-8', '.png': 'image/png',
+    '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.png': 'image/png',
     '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp',
   })[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream';
 }
@@ -359,6 +359,7 @@ export function createControlServer({
     if (request.method === 'GET' && (pathname === '/' || pathname === '/control.html')) return serveFile(response, path.join(WEB_DIR, 'control.html'));
     if (request.method === 'GET' && pathname === '/control.css') return serveFile(response, path.join(WEB_DIR, 'control.css'));
     if (request.method === 'GET' && pathname === '/control.js') return serveFile(response, path.join(WEB_DIR, 'control.js'));
+    if (request.method === 'GET' && pathname === '/i18n.mjs') return serveFile(response, path.join(WEB_DIR, 'i18n.mjs'));
     return sendJson(response, 404, errorPayload(new AppError('NOT_FOUND', '接口不存在', 404)));
   }
 
