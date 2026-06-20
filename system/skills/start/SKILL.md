@@ -89,14 +89,11 @@ Style readiness is not stored inside the selected character profile.
 
 Read `system/rules/output_formats.md`.
 
-Offer every active `format_id`.
+Read the registry at runtime and dynamically enumerate every active format section. Offer each active `format_id` with its registry label, physical size, pixel size, and selectable orientation. Do not maintain a hard-coded current-format list in this skill.
 
-Current options:
+Offer a custom output option only when the UI or current request supplies valid positive-integer width and height dimensions. Treat those dimensions as session data, not as a registered `format_id`, and do not add them to `system/rules/output_formats.md` implicitly.
 
-- `jp_711_photo_l_1051x1500`: 7-Eleven photo print L size, `1051 x 1500`
-- `jp_711_photo_2l_1500x2102`: 7-Eleven photo print 2L size, `1500 x 2102`
-
-If no output format is selected, stop. Final generation requires a registered `format_id`.
+If neither an active registered format nor valid custom dimensions are selected, stop.
 
 ## Step 4: Draw Count
 
@@ -127,6 +124,8 @@ Before image generation, produce this summary and ask for confirmation:
 - character_profile:
 - style:
 - format_id:
+- custom_width:
+- custom_height:
 - draw_count:
 - mode: validation | batch
 - allowed_output:
@@ -135,7 +134,7 @@ Before image generation, produce this summary and ask for confirmation:
 `mode` rules:
 
 - `validation`: missing standard multiview reference or format confirmation
-- `batch`: readable standard multiview reference plus registered output format
+- `batch`: readable standard multiview reference plus either an active registered output format or valid custom dimensions accepted by the selected style
 
 ## Handoff
 
@@ -145,6 +144,6 @@ Never hand off if:
 
 - no character profile is selected
 - no style is selected
-- no registered `format_id` is selected
+- neither an active registered `format_id` nor valid custom dimensions are selected
 - draw count is missing
 - batch mode was requested but the selected profile lacks `multiview_reference.png`

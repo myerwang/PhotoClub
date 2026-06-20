@@ -5,11 +5,9 @@ This rule defines visual layout and print readiness only. It must not decide whi
 ## Canvas
 
 - Require one active `format_id` from `system/rules/output_formats.md`.
-- Supported 7-Eleven formats:
-  - `jp_711_photo_l_1051x1500`: `1051 x 1500`
-  - `jp_711_photo_2l_1500x2102`: `1500 x 2102`
-- Export at the exact registered pixel size.
-- Use a portrait canvas and plain white background.
+- Read that registry at runtime and dynamically support every active format; do not maintain a separate supported-format list here.
+- Derive and export the exact registered portrait or landscape pixel size selected for the session.
+- Use the selected orientation and a plain white background.
 - Follow the sticker-only bleed rule in `styles/sticker.md`.
 
 ## Scope Boundary
@@ -36,7 +34,7 @@ Those choices come from the generation request, the selected style's non-restric
 - Leave generous visible white space for cutting.
 - Keep at least 50 px between neighboring outer die-cut guide outlines; prefer 60-80 px.
 - Keep every cut line and all sticker artwork inside an outer safe margin equal to about 3% of the canvas width.
-- Use about 32 px for `1051 x 1500` and about 45 px for `1500 x 2102`.
+- Safe-margin examples only: `1051 x 1500` yields about 32 px and `1500 x 2102` yields about 45 px in portrait. For every other registered size or landscape orientation, calculate 3% from the actual selected canvas width.
 - Apply the safe margin once only; do not shrink an already compliant generated sheet into a second inset frame.
 - Use the available page width efficiently with the default 3-column layout.
 - Do not silently reduce the default 15-island count. Regenerate or adjust island scale when spacing cannot be maintained.
@@ -84,7 +82,7 @@ Unless the current session explicitly overrides the layout, arrange exactly 15 s
 Give every island a thick clean white border, a thin light-gray die-cut guide outside it, and a faint attached edge effect.
 No artwork, border, guide, or shadow may touch, overlap, merge, or share a boundary with another island.
 Keep at least 50 px of white space between neighboring outer guide lines.
-Keep an outer plain-white safe margin equal to about 3% of the canvas width: about 32 px for 1051 x 1500 or 45 px for 1500 x 2102.
+Keep an outer plain-white safe margin equal to about 3% of the selected canvas width. As safe-margin examples only, 1051 x 1500 uses about 32 px and 1500 x 2102 uses about 45 px in portrait; calculate the value from the actual width for every other canvas and orientation.
 Apply this margin once and use the remaining page width efficiently with the default 3-column layout.
 No packaging, backing card, plastic cover, hanging hole, product mockup, logo, or watermark.
 Do not add any subject identity, count, age, gender, solo/group, or combination restriction from this sticker rule.

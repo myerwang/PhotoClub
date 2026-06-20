@@ -12,9 +12,10 @@ Printable sticker sheet assets. This file defines visual and print behavior only
 
 ## Required Output
 
-- explicit registered output `format_id`
-- for `jp_711_photo_l_1051x1500`: exact `1051 x 1500`
-- for `jp_711_photo_2l_1500x2102`: exact `1500 x 2102`
+- explicit active registered output `format_id`
+- read `system/rules/output_formats.md` at runtime and dynamically resolve every active format
+- derive the exact portrait or landscape pixel dimensions from the selected registry section; do not maintain a supported-format list in this style
+- export at those exact dimensions without substituting a nearby ratio or rotating and cropping another canvas
 - plain white background
 - independent sticker islands
 - default layout: exactly 3 columns x 5 rows, for 15 sticker islands
@@ -53,7 +54,7 @@ These are visual-variation defaults, not restrictions on which people or combina
 This requirement belongs to sticker style generation only. It does not change the registered output photo size, and it must not be applied to non-sticker photo styles.
 
 - Use an outer safe margin equal to approximately 3% of the canvas width on every side.
-- For `1051 x 1500`, use about 32 px; for `1500 x 2102`, use about 45 px.
+- Safe-margin examples only: a `1051 x 1500` portrait canvas uses about 32 px, while a `1500 x 2102` portrait canvas uses about 45 px. Calculate all other portrait and landscape margins from the selected canvas width.
 - Keep every sticker cut line, artwork, white border, die-cut guide, and edge effect inside that safe margin.
 - Leave only this outer margin plain white; do not create a second inset during post-processing.
 - Use the available width efficiently with the default 3-column layout.

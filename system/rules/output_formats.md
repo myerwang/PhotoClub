@@ -1,8 +1,8 @@
 # Output Format Registry
 
-Every final output must specify one registered `format_id`.
+Every final output must use exactly two allowed cases: (a) one active registered preset `format_id`, or (b) one-request custom pixel format validated by server/UI and never persisted to the registry.
 
-If the user does not specify an output format, stop and ask for the format before generating. Do not infer it silently.
+The registry remains the authority for presets. If the user supplies neither an active registered preset nor validated one-request custom pixel dimensions, stop and ask for the format before generating. Do not infer it silently.
 
 ## Available Formats
 
@@ -15,7 +15,7 @@ If the user does not specify an output format, stop and ask for the format befor
 - Pixel size: `1051 x 1500`
 - Orientation: selectable (`portrait` or `landscape`)
 - Pixel basis: 300 dpi, rounded to nearest whole pixel
-- Size source/rationale: 7-Eleven photo print supports L photo paper; Japanese L print standard is 89 x 127 mm
+- Size source: 7-Eleven photo print supports L/2L photo paper; Japanese L print standard is 89 x 127 mm
 - Ratio-source fallback: `/Users/yohji/photo/比例参考/输出照片比例参考.png`
 - Ratio-source fallback usage: dimensions only
 - Default use: printable sticker sheets and photo-style outputs intended for this L-size print workflow
@@ -39,7 +39,7 @@ Rules:
 - Pixel size: `1500 x 2102`
 - Orientation: selectable (`portrait` or `landscape`)
 - Pixel basis: 300 dpi, rounded to nearest whole pixel
-- Size source/rationale: 7-Eleven photo print supports 2L photo paper; Japanese 2L print standard is 127 x 178 mm
+- Size source: 7-Eleven photo print supports L/2L photo paper; Japanese 2L print standard is 127 x 178 mm
 - Default use: printable sticker sheets and photo-style outputs intended for this 2L-size print workflow
 
 Rules:
@@ -59,6 +59,7 @@ Rules:
 - Orientation: selectable (`portrait` or `landscape`)
 - Pixel basis: 300 dpi, rounded to nearest whole pixel
 - Size source/rationale: Japanese DSC print standard is 89 x 119 mm
+- Source image usage: none (textual physical-size standard only; dimensions-only)
 - Default use: printable sticker sheets and photo-style outputs intended for DSC-size paper
 
 Rules:
@@ -78,6 +79,7 @@ Rules:
 - Orientation: selectable (`portrait` or `landscape`)
 - Pixel basis: 300 dpi, rounded to nearest whole pixel
 - Size source/rationale: Japanese KG print standard is 102 x 152 mm
+- Source image usage: none (textual physical-size standard only; dimensions-only)
 - Default use: printable sticker sheets and photo-style outputs intended for KG-size paper
 
 Rules:
@@ -97,6 +99,7 @@ Rules:
 - Orientation: selectable (`portrait` or `landscape`)
 - Pixel basis: 300 dpi, rounded to nearest whole pixel
 - Size source/rationale: Japanese 六切 print standard is 203 x 254 mm
+- Source image usage: none (textual physical-size standard only; dimensions-only)
 - Default use: printable sticker sheets and photo-style outputs intended for 六切-size paper
 
 Rules:
@@ -116,6 +119,7 @@ Rules:
 - Orientation: selectable (`portrait` or `landscape`)
 - Pixel basis: 300 dpi, rounded to nearest whole pixel
 - Size source/rationale: ISO A4 paper standard is 210 x 297 mm
+- Source image usage: none (textual physical-size standard only; dimensions-only)
 - Default use: printable sticker sheets and photo-style outputs intended for A4 paper
 
 Rules:
@@ -135,6 +139,7 @@ Rules:
 - Orientation: selectable (`portrait` or `landscape`)
 - Pixel basis: 300 dpi, rounded to nearest whole pixel
 - Size source/rationale: North American 4 x 6 inch photo print standard at 300 dpi
+- Source image usage: none (textual physical-size standard only; dimensions-only)
 - Default use: printable sticker sheets and photo-style outputs intended for 4 x 6 inch paper
 
 Rules:
@@ -154,6 +159,7 @@ Rules:
 - Orientation: selectable (`portrait` or `landscape`)
 - Pixel basis: 300 dpi, rounded to nearest whole pixel
 - Size source/rationale: North American 5 x 7 inch photo print standard at 300 dpi
+- Source image usage: none (textual physical-size standard only; dimensions-only)
 - Default use: printable sticker sheets and photo-style outputs intended for 5 x 7 inch paper
 
 Rules:
@@ -173,6 +179,7 @@ Rules:
 - Orientation: selectable (`portrait` or `landscape`)
 - Pixel basis: 300 dpi, rounded to nearest whole pixel
 - Size source/rationale: North American 8 x 10 inch photo print standard at 300 dpi
+- Source image usage: none (textual physical-size standard only; dimensions-only)
 - Default use: printable sticker sheets and photo-style outputs intended for 8 x 10 inch paper
 
 Rules:

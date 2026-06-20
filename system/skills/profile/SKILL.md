@@ -21,7 +21,7 @@ Before generating:
 7. For final styled output, read `system/rules/output_formats.md`.
 8. For family sticker sheets, read `system/rules/family_sticker_composition.md`.
 9. For sticker output, read `system/rules/print_ready_sticker_base.md`.
-10. For final styled output, confirm the request specifies a registered `format_id`; if no `format_id` is specified, stop and ask for one.
+10. For final styled output, require either an active registered `format_id` or valid positive-integer custom width and height dimensions accepted by the selected style. If neither is specified, stop and ask for one.
 11. Confirm every requested person has a readable `multiview_reference.png` before final styled output.
 12. If no character profile exists, do not produce final output; create exactly one character-profile multiview reference image.
 13. A profile has no separate success, failure, or approval state. Its availability is determined only by whether `profiles/<name>/multiview_reference.png` exists and is readable.
@@ -66,17 +66,7 @@ Session-specific subject choices and one-off requirements belong only to the cur
 For the sticker style, use the reusable default of 3 columns x 5 rows and 15 sticker islands. An explicit current-session request may override the grid, count, size distribution, or other special requirements for that generation only.
 
 - Output format must be explicitly specified.
-- Current available formats:
-- `jp_711_photo_l_1051x1500`: L size, `1051 x 1500`
-- `jp_711_photo_2l_1500x2102`: 2L size, `1500 x 2102`
-- `jp_photo_dsc_1051x1406`: DSC, `1051 x 1406`
-- `jp_photo_kg_1205x1795`: KG, `1205 x 1795`
-- `jp_photo_mutsugiri_2398x3000`: 六切, `2398 x 3000`
-- `iso_a4_2480x3508`: A4, `2480 x 3508`
-- `intl_photo_4x6_1200x1800`: 4 x 6 inch, `1200 x 1800`
-- `intl_photo_5x7_1500x2100`: 5 x 7 inch, `1500 x 2100`
-- `intl_photo_8x10_2400x3000`: 8 x 10 inch, `2400 x 3000`
-- Use `system/rules/output_formats.md` as the authority for dimensions and the full active registry.
+- Read `system/rules/output_formats.md` at runtime and dynamically resolve every active format. It is the sole authority for registered preset availability, dimensions, and orientation; do not copy its registry into this skill. A validated one-request custom target comes from the current request and is not a registry entry.
 - Apply any print bleed/safe-margin requirements from the selected style rule, not from the output photo format.
 - User-provided source photos live under `/Users/yohji/photo/input/`.
 - Generated deliverables go directly under `/Users/yohji/photo/output/` unless they are being approved into `profiles/`.

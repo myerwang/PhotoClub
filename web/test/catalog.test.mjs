@@ -100,6 +100,105 @@ test('parses the production output format registry with all nine active formats'
   ]);
 });
 
+test('production registry preserves legacy L and 2L source metadata', async () => {
+  const markdown = await readFile(new URL('../../system/rules/output_formats.md', import.meta.url), 'utf8');
+  assert.match(markdown,
+    /- Size source: 7-Eleven photo print supports L\/2L photo paper; Japanese L print standard is 89 x 127 mm/);
+  assert.match(markdown,
+    /- Size source: 7-Eleven photo print supports L\/2L photo paper; Japanese 2L print standard is 127 x 178 mm/);
+});
+
+test('new production formats declare dimensions-only textual source usage', async () => {
+  const markdown = await readFile(new URL('../../system/rules/output_formats.md', import.meta.url), 'utf8');
+  const newFormatIds = [
+    'jp_photo_dsc_1051x1406',
+    'jp_photo_kg_1205x1795',
+    'jp_photo_mutsugiri_2398x3000',
+    'iso_a4_2480x3508',
+    'intl_photo_4x6_1200x1800',
+    'intl_photo_5x7_1500x2100',
+    'intl_photo_8x10_2400x3000',
+  ];
+
+  for (const id of newFormatIds) {
+    const heading = '### `' + id + '`';
+    const section = markdown.match(new RegExp(`${heading}([\\s\\S]*?)(?=\\n### |\\n## Adding Formats)`))?.[1];
+    assert.ok(section, `missing registry section ${id}`);
+    assert.match(section,
+      /- Source image usage: none \(textual physical-size standard only; dimensions-only\)/,
+      `${id} must explicitly declare that no source image is used`);
+  }
+});
+
+test('workflow rules use the authoritative output format registry dynamically', async () => {
+  const files = {
+    start: '../../system/skills/start/SKILL.md',
+    sticker: '../../styles/sticker.md',
+    stickerBase: '../../system/rules/print_ready_sticker_base.md',
+    profile: '../../system/skills/profile/SKILL.md',
+    outputRatio: '../../system/rules/output_ratio.md',
+  };
+  const entries = await Promise.all(Object.entries(files).map(async ([name, relativePath]) => [
+    name,
+    await readFile(new URL(relativePath, import.meta.url), 'utf8'),
+  ]));
+  const documents = Object.fromEntries(entries);
+  const registry = await readFile(new URL('../../system/rules/output_formats.md', import.meta.url), 'utf8');
+  const activeIds = parseOutputFormats(registry).map(({ id }) => id);
+
+  assert.equal(activeIds.length, 9);
+  for (const [name, markdown] of Object.entries(documents)) {
+    assert.match(markdown, /system\/rules\/output_formats\.md/,
+      `${name} must name the authoritative registry`);
+    assert.match(markdown, /(?:every|all) active format/i,
+      `${name} must apply to every active registry format`);
+    assert.match(markdown, /(?:read|derive|resolve|enumerate).*(?:at runtime|dynamically)/i,
+      `${name} must instruct runtime registry lookup`);
+    assert.doesNotMatch(markdown, /Current options:|Current available formats:|Supported 7-Eleven formats:/,
+      `${name} must not maintain a stale current-format list`);
+    for (const id of activeIds) {
+      assert.doesNotMatch(markdown, new RegExp(`\\b${id}\\b`),
+        `${name} must not duplicate registry entry ${id}`);
+    }
+  }
+
+  assert.match(documents.start, /custom.*valid.*(?:width|dimensions)/i,
+    'start must allow custom output only when valid dimensions are supplied');
+  assert.match(documents.sticker, /safe-margin.*examples?/i);
+  assert.match(documents.stickerBase, /safe-margin.*examples?/i);
+
+  for (const [name, markdown] of Object.entries({
+    outputFormats: registry,
+    outputRatio: documents.outputRatio,
+  })) {
+    assert.match(markdown, /exactly two (?:allowed )?cases/i,
+      `${name} must define exactly two output-format cases`);
+    assert.match(markdown, /\(a\).*one active registered preset `format_id`/i,
+      `${name} must allow one active registered preset`);
+    assert.match(markdown, /\(b\).*one-request custom pixel format/i,
+      `${name} must allow a one-request custom pixel format`);
+    assert.match(markdown, /validated by (?:the )?server\/UI/i,
+      `${name} must require server/UI validation for custom dimensions`);
+    assert.match(markdown, /never persisted to (?:the )?registry/i,
+      `${name} must prohibit persisting one-request custom formats`);
+    assert.match(markdown, /registry remains (?:the )?authority for presets/i,
+      `${name} must retain preset registry authority`);
+  }
+
+  assert.doesNotMatch(documents.profile, /sole authority for format availability, dimensions/i);
+  assert.match(documents.profile,
+    /sole authority for registered preset availability, dimensions, and orientation/i);
+  assert.match(documents.profile,
+    /validated one-request custom target comes from the current request/i);
+
+  assert.doesNotMatch(documents.outputRatio,
+    /output_formats\.md` as the authority for final dimensions/i);
+  assert.match(documents.outputRatio,
+    /output_formats\.md` as the authority for registered preset dimensions/i);
+  assert.match(documents.outputRatio,
+    /validated custom dimensions are authoritative only for the current request/i);
+});
+
 test('loadCatalog returns active styles and formats', async () => {
   const catalog = await loadCatalog(await fixture());
   assert.deepEqual(catalog.styles, [{
