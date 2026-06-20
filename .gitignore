@@ -9,6 +9,7 @@ output/*
 
 .control/
 work/
+docs/
 
 profiles/*
 !profiles/README.md
