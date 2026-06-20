@@ -67,9 +67,16 @@ For the sticker style, use the reusable default of 3 columns x 5 rows and 15 sti
 
 - Output format must be explicitly specified.
 - Current available formats:
-  - `jp_711_photo_l_1051x1500`: L size, `1051 x 1500`
-  - `jp_711_photo_2l_1500x2102`: 2L size, `1500 x 2102`
-- Use `system/rules/output_formats.md` as the authority for dimensions.
+- `jp_711_photo_l_1051x1500`: L size, `1051 x 1500`
+- `jp_711_photo_2l_1500x2102`: 2L size, `1500 x 2102`
+- `jp_photo_dsc_1051x1406`: DSC, `1051 x 1406`
+- `jp_photo_kg_1205x1795`: KG, `1205 x 1795`
+- `jp_photo_mutsugiri_2398x3000`: 六切, `2398 x 3000`
+- `iso_a4_2480x3508`: A4, `2480 x 3508`
+- `intl_photo_4x6_1200x1800`: 4 x 6 inch, `1200 x 1800`
+- `intl_photo_5x7_1500x2100`: 5 x 7 inch, `1500 x 2100`
+- `intl_photo_8x10_2400x3000`: 8 x 10 inch, `2400 x 3000`
+- Use `system/rules/output_formats.md` as the authority for dimensions and the full active registry.
 - Apply any print bleed/safe-margin requirements from the selected style rule, not from the output photo format.
 - User-provided source photos live under `/Users/yohji/photo/input/`.
 - Generated deliverables go directly under `/Users/yohji/photo/output/` unless they are being approved into `profiles/`.

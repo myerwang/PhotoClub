@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -81,6 +81,22 @@ test('parses registered output formats and exact dimensions', () => {
   assert.deepEqual(formats, [
     { id: 'jp_711_photo_l_1051x1500', label: '7-Eleven L', width: 1051, height: 1500 },
     { id: 'jp_711_photo_2l_1500x2102', label: '7-Eleven 2L', width: 1500, height: 2102 },
+  ]);
+});
+
+test('parses the production output format registry with all nine active formats', async () => {
+  const markdown = await readFile(new URL('../../system/rules/output_formats.md', import.meta.url), 'utf8');
+  const formats = parseOutputFormats(markdown);
+  assert.deepEqual(formats, [
+    { id: 'jp_711_photo_l_1051x1500', label: '7-Eleven photo print L size', width: 1051, height: 1500 },
+    { id: 'jp_711_photo_2l_1500x2102', label: '7-Eleven photo print 2L size', width: 1500, height: 2102 },
+    { id: 'jp_photo_dsc_1051x1406', label: 'DSC', width: 1051, height: 1406 },
+    { id: 'jp_photo_kg_1205x1795', label: 'KG', width: 1205, height: 1795 },
+    { id: 'jp_photo_mutsugiri_2398x3000', label: '六切', width: 2398, height: 3000 },
+    { id: 'iso_a4_2480x3508', label: 'A4', width: 2480, height: 3508 },
+    { id: 'intl_photo_4x6_1200x1800', label: '4 x 6 inch', width: 1200, height: 1800 },
+    { id: 'intl_photo_5x7_1500x2100', label: '5 x 7 inch', width: 1500, height: 2100 },
+    { id: 'intl_photo_8x10_2400x3000', label: '8 x 10 inch', width: 2400, height: 3000 },
   ]);
 });
 
