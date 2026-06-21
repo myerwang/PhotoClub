@@ -630,6 +630,7 @@ export async function resizePreviewImage(
 export async function syncStylePreview({
   rootDir,
   styleId,
+  styleFingerprint,
   outputPaths,
   jobId,
   generatedAt = new Date().toISOString(),
@@ -701,6 +702,7 @@ export async function syncStylePreview({
 
       const record = {
         styleId: safeStyleId,
+        ...(typeof styleFingerprint === 'string' ? { styleFingerprint } : {}),
         generatedAt,
         jobId: safeJobId,
         sourcePath,

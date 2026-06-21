@@ -48,6 +48,11 @@ When the selected subjects are people and the current request does not specify o
 
 These are visual-variation defaults, not restrictions on which people or combinations may appear. An explicit session request may override them for that generation only.
 
+## Subject Boundary
+
+- Apply `system/rules/style_base.md`.
+- This style defines visual treatment only and does not restrict subject identity, attributes, count, or combinations.
+
 ## Sticker-Style Print Bleed Requirement
 
 This requirement belongs to sticker style generation only. It does not change the registered output photo size, and it must not be applied to non-sticker photo styles.

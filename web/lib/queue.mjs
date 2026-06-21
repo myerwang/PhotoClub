@@ -90,6 +90,15 @@ export class SerialJobQueue {
     return count;
   }
 
+  cancelWaitingBatch(batchId) {
+    if (!batchId) return 0;
+    let count = 0;
+    for (const job of this.jobs) {
+      if (job.batchId === batchId && job.status === 'queued' && this.cancel(job.id)) count += 1;
+    }
+    return count;
+  }
+
   terminateActive() {
     if (!this.active) return null;
     const job = this.active;

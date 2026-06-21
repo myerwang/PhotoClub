@@ -320,6 +320,19 @@ test('syncStylePreview uses the last output path and preserves existing history'
   assert.deepEqual(history.sticker, record);
 });
 
+test('syncStylePreview binds generated history to the exact style fingerprint', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.png', 'source');
+  const fingerprint = 'a'.repeat(64);
+  const record = await syncStylePreview({
+    rootDir, styleId: 'sticker', styleFingerprint: fingerprint,
+    outputPaths: [sourcePath], jobId: 'job-fingerprint',
+    resizeImpl: (_source, target) => copyFile(sourcePath, target),
+  });
+  assert.equal(record.styleFingerprint, fingerprint);
+  assert.equal((await readStyleHistory(rootDir)).sticker.styleFingerprint, fingerprint);
+});
+
 test('syncStylePreview keeps exactly one independently replaceable preview per style', async () => {
   const rootDir = await createRoot();
   const alphaFirst = await writeOutput(rootDir, 'alpha-first.png', 'alpha-first');

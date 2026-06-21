@@ -7,8 +7,19 @@ import {
   buildGeneratePrompt,
   buildProfilePrompt,
   buildPromptProfilePrompt,
+  buildStylePrompt,
   runCodexTask,
 } from '../lib/runner.mjs';
+
+test('builds a structured reusable style task from one user prompt', () => {
+  const prompt = buildStylePrompt({ rootDir: '/repo', description: '柔和雨夜人像', stagingPath: '/repo/.control/style.json' });
+  assert.match(prompt, /system\/rules\/style_base\.md/);
+  assert.match(prompt, /柔和雨夜人像/);
+  assert.match(prompt, /\/repo\/\.control\/style\.json/);
+  assert.match(prompt, /真实重大伤亡|恐怖袭击/);
+  assert.match(prompt, /rejected/);
+  assert.match(prompt, /不得.*五官|删除.*五官/);
+});
 
 function childResult({ code = 0, stderr = '', stdout = '' } = {}) {
   const child = new EventEmitter();
@@ -69,6 +80,26 @@ test('tries the configured mini model before default fallback', async () => {
   assert.equal(calls.length, 2);
   assert.equal(calls[0].includes('missing-mini'), true);
   assert.equal(calls[1].includes('-m'), false);
+});
+
+test('uses the low-token orchestration model by default and reports usage', async () => {
+  let args;
+  const result = await runCodexTask({
+    prompt: 'task', rootDir: '/workspace', env: {},
+    spawnImpl: (_command, received) => {
+      args = received;
+      return childResult({ stdout: '{"type":"turn.completed","usage":{"input_tokens":12,"output_tokens":3}}\n' });
+    },
+  });
+  assert.equal(args.includes('gpt-5.4-mini'), true);
+  assert.deepEqual(result.usage, { inputTokens: 12, outputTokens: 3, totalTokens: 15 });
+});
+
+test('classifies quota exhaustion for resumable generation', async () => {
+  await assert.rejects(
+    runCodexTask({ prompt: 'task', rootDir: '/workspace', miniModel: '', spawnImpl: () => childResult({ code: 1, stderr: 'usage limit reached' }) }),
+    { code: 'CODEX_QUOTA_EXHAUSTED' },
+  );
 });
 
 test('requires image_gen and gpt-image-2-or-newer in image prompts', () => {

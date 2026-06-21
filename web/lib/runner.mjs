@@ -42,7 +42,7 @@ export async function runCodexTask({
   prompt,
   rootDir,
   codexPath,
-  miniModel = process.env.PHOTO_CODEX_MINI_MODEL || '',
+  miniModel = process.env.PHOTO_CODEX_MINI_MODEL || 'gpt-5.4-mini',
   env = process.env,
   spawnImpl = spawn,
   signal,
@@ -59,11 +59,29 @@ export async function runCodexTask({
     result = await invoke({ codexPath: executable, args: [...baseArgs, prompt], env, spawnImpl, signal });
   }
   if (result.code !== 0) {
+    if (/usage limit|quota|rate limit|insufficient credits|额度|流量不足/i.test(`${result.stderr}\n${result.stdout}`)) {
+      throw new AppError('CODEX_QUOTA_EXHAUSTED', 'Codex 使用额度暂时不足', 429, {
+        exitCode: result.code,
+        log: result.stderr.slice(-4_000),
+      });
+    }
     throw new AppError('CODEX_TASK_FAILED', '独立 Codex 任务执行失败', 500, {
       exitCode: result.code,
       log: result.stderr.slice(-4_000),
     });
   }
+  let inputTokens = 0;
+  let outputTokens = 0;
+  for (const line of result.stdout.split('\n')) {
+    try {
+      const event = JSON.parse(line);
+      const usage = event.usage ?? event.turn?.usage ?? event.result?.usage;
+      if (!usage) continue;
+      inputTokens = Math.max(inputTokens, Number(usage.input_tokens ?? usage.inputTokens ?? 0));
+      outputTokens = Math.max(outputTokens, Number(usage.output_tokens ?? usage.outputTokens ?? 0));
+    } catch { /* Non-JSON log lines are ignored. */ }
+  }
+  result.usage = { inputTokens, outputTokens, totalTokens: inputTokens + outputTokens };
   return result;
 }
 
@@ -110,4 +128,8 @@ export function buildPromptProfilePrompt({ rootDir = process.cwd(), profileId, d
 ${standardMultiviewRequirements()}
 人物目录中只允许保留最终图片，不得保存提示词、判断记录、网页素材、来源图片、文字设定或其他文件。
 ${destination}`;
+}
+
+export function buildStylePrompt({ rootDir = process.cwd(), description, stagingPath }) {
+  return `把用户提供的照片提示词改造成 PhotoClub 可复用 Style。\n\n用户原始提示词：\n${description}\n\n必须读取并遵守 ${path.join(rootDir, 'system', 'rules', 'style_base.md')}。只提取摄影、构图、镜头、灯光、色彩、场景、服装语言、材质和后期处理。删除固定人物身份、姓名、性别、年龄、人数、五官文字描写、输出尺寸和一次性要求，不得限制以后投喂的人物。\n\n先判断提示词是否把真实重大伤亡、恐怖袭击、受害者或灾难重演作为娱乐化视觉主题；如果是，只输出 {"rejected":true,"reason":"简明原因"}。否则输出严格 JSON：{"id":"小写英文字母数字组成的唯一建议标识","name":"简短中文名","englishName":"Short English Name","sourcePrompt":"用户原始提示词","adaptations":["修改记录"],"visualRules":["视觉规则"],"composition":["构图规则"],"lighting":["灯光与色彩规则"]}。每个数组至少一项。不得添加 Markdown。\n\n将 JSON 写入 ${stagingPath}，验证文件存在后结束。不要直接创建或修改 styles 目录。`;
 }

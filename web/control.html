@@ -21,22 +21,27 @@
   </header>
 
   <main>
-    <section aria-labelledby="profile-title">
+    <section class="people-column" aria-labelledby="profile-title">
       <div class="section-heading"><h2 id="profile-title" data-i18n="section.people">人物</h2><span class="section-tools"><span id="profile-count"></span><button id="profile-open" type="button" class="compact-button" data-testid="profile-open" data-i18n="button.profile">人物设定</button></span></div>
       <div id="profiles" class="profile-grid" data-testid="profiles"></div>
     </section>
 
-    <section aria-labelledby="style-title">
+    <div class="column-separator" role="separator" aria-orientation="vertical" aria-label="调整人物与风格列宽" tabindex="0" data-boundary="0"></div>
+
+    <section class="styles-column" aria-labelledby="style-title">
       <div class="section-heading">
         <h2 id="style-title" data-i18n="section.styles">风格</h2>
         <span class="section-tools style-tools">
           <span id="style-count"></span>
+          <button id="style-open" type="button" class="compact-button" data-testid="style-open" data-i18n="button.addStyle">添加风格</button>
           <button id="style-select-all" type="button" class="compact-button" aria-pressed="false" data-testid="style-select-all" data-i18n="button.selectAllStyles">全选可见风格</button>
           <button id="style-only-new" type="button" class="compact-button compact-toggle" aria-pressed="false" data-testid="style-only-new" data-i18n="button.onlyUngenerated">仅看未生成</button>
         </span>
       </div>
       <div id="styles" class="style-grid" data-testid="styles"></div>
     </section>
+
+    <div class="column-separator" role="separator" aria-orientation="vertical" aria-label="调整风格与输出列宽" tabindex="0" data-boundary="1"></div>
 
     <div class="operation-column">
       <section class="settings" aria-labelledby="settings-title">
@@ -74,6 +79,8 @@
         <div id="task-state" class="task-state" data-testid="task-state" data-i18n="task.none">暂无任务</div>
         <div id="error" class="error" hidden role="alert" data-testid="error"></div>
         <div id="result" class="result" data-testid="result"></div>
+        <div class="history-heading"><h3 data-i18n="history.title">生成记录</h3><button id="history-refresh" type="button" class="compact-button" data-i18n="button.refresh">刷新</button></div>
+        <div id="generation-history" class="generation-history" data-testid="generation-history"></div>
       </section>
     </div>
   </main>
@@ -101,6 +108,16 @@
         <p class="muted" data-i18n="profile.promptHint">系统会先判断是否为真实人物。真实人物先检索公开参考图；虚构人物直接按描述生成。</p>
       </div>
       <div class="dialog-actions spread"><button id="open-input" type="button" class="secondary" data-testid="open-input" data-i18n="button.openInput">打开输入文件夹</button><span class="dialog-action-group"><button id="profile-cancel" type="button" class="secondary" data-i18n="button.cancel">取消</button><button id="profile-generate" type="button" class="primary" data-testid="profile-generate" data-i18n="button.start">开始生成</button></span></div>
+    </form>
+  </dialog>
+
+  <dialog id="style-dialog" data-testid="style-dialog">
+    <form id="style-form">
+      <div class="dialog-heading"><h2 data-i18n="style.dialogTitle">添加风格</h2><button id="style-close" type="button" class="icon-button" aria-label="关闭" data-i18n-aria-label="aria.close">×</button></div>
+      <label for="style-prompt" data-i18n="style.promptLabel">风格提示词</label>
+      <textarea id="style-prompt" maxlength="4000" rows="8" required placeholder="描述希望照片呈现的视觉风格" data-i18n-placeholder="style.promptPlaceholder" data-testid="style-prompt"></textarea>
+      <p class="muted" data-i18n="style.promptHint">系统会整理为可复用风格规则。请勿提交真实灾难或受害者题材。</p>
+      <div class="dialog-actions"><button id="style-cancel" type="button" class="secondary" data-i18n="button.cancel">取消</button><button id="style-create" type="submit" class="primary" data-i18n="button.createStyle">创建风格</button></div>
     </form>
   </dialog>
 

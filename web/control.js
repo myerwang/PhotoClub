@@ -1,5 +1,6 @@
 import { LANGUAGE_LOCALES, normalizeLanguage, translate } from './i18n.mjs';
 import { setStyleChecked, toggleAllVisible, visibleStyles } from './style-selection.mjs';
+import { dragBoundary, normalizeColumnRatio } from './layout-columns.mjs';
 
 const CUSTOM_FORMAT_ID = 'custom';
 const CUSTOM_FORMAT_LIMITS = { min: 256, max: 8192, maxArea: 40_000_000 };
@@ -27,7 +28,9 @@ const state = {
   job: null,
   batch: null,
   resultUrls: [],
+  history: [],
   language: normalizeLanguage(savedLanguage()),
+  columnRatio: normalizeColumnRatio((() => { try { return localStorage.getItem('photoclub.columnRatio'); } catch { return null; } })()),
 };
 
 const clientId = crypto.randomUUID();
@@ -169,6 +172,8 @@ function createProfileChoice(item) {
 }
 
 function createStyleChoice(item) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'choice-wrap';
   const element = document.createElement('label');
   element.className = 'choice';
 
@@ -203,8 +208,23 @@ function createStyleChoice(item) {
   name.className = 'choice-name';
   name.textContent = styleLabel(item);
 
-  element.append(input, media, name);
-  return element;
+  element.append(input, media);
+  const footer = document.createElement('div');
+  footer.className = 'choice-footer';
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'style-delete';
+  remove.append(trashIcon());
+  remove.title = t('aria.deleteStyle', { name: styleLabel(item) });
+  remove.setAttribute('aria-label', remove.title);
+  remove.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    deleteStyle(item.id);
+  });
+  footer.append(name, remove);
+  wrapper.append(element, footer);
+  return wrapper;
 }
 
 function visibleStyleItems() {
@@ -279,6 +299,50 @@ function renderResults() {
   }));
 }
 
+function renderHistory() {
+  const items = state.history.map((batch) => {
+    const node = document.createElement('div');
+    node.className = 'history-item';
+    const row = document.createElement('div');
+    row.className = 'history-item-row';
+    const label = document.createElement('strong');
+    label.textContent = `${new Date(batch.createdAt).toLocaleString(LANGUAGE_LOCALES[state.language])} · ${t(`history.status.${batch.status}`, {}, batch.status)}`;
+    row.append(label);
+    if (['paused_quota', 'interrupted', 'failed'].includes(batch.status) && batch.completed < batch.total) {
+      const resume = document.createElement('button');
+      resume.type = 'button';
+      resume.className = 'compact-button';
+      resume.textContent = t('button.resume');
+      resume.addEventListener('click', () => resumeBatch(batch.id));
+      row.append(resume);
+    }
+    const progress = document.createElement('div');
+    progress.className = 'history-progress';
+    const usage = batch.usage?.totalTokens ? ` · ${batch.usage.totalTokens} tokens` : '';
+    progress.textContent = `${batch.completed} / ${batch.total}${usage}`;
+    node.append(row, progress);
+    return node;
+  });
+  $('generation-history').replaceChildren(...(items.length ? items : [empty(t('history.empty'))]));
+}
+
+async function refreshHistory() {
+  const result = await api('/api/generation-history');
+  state.history = result.batches ?? [];
+  renderHistory();
+}
+
+async function resumeBatch(batchId) {
+  clearError();
+  try {
+    const { jobs } = await api(`/api/generation-history/${encodeURIComponent(batchId)}/resume`, { method: 'POST', body: '{}' });
+    state.job = null;
+    state.batch = createBatchState(batchId, jobs);
+    batchStatusMessage();
+    await refreshHistory();
+  } catch (error) { showError(error, 'suggestion.job'); }
+}
+
 function batchStatusMessage() {
   const batch = state.batch;
   if (!batch) return;
@@ -302,6 +366,7 @@ function batchStatusMessage() {
       $('task-state').textContent = `${t('task.generate')}: ${t('task.batchComplete')}`;
     }
     renderLock();
+    refreshHistory().catch(() => {});
     return;
   }
 
@@ -324,10 +389,11 @@ function batchStatusMessage() {
 function renderJobStatus() {
   const job = state.job;
   if (!job) return;
-  $('task-state').textContent = `${t(job.type === 'profile' ? 'task.profile' : 'task.generate')}: ${t(`status.${job.status}`, {}, job.status)}`;
+  const taskKey = job.type === 'profile' ? 'task.profile' : job.type === 'style' ? 'task.style' : 'task.generate';
+  $('task-state').textContent = `${t(taskKey)}: ${t(`status.${job.status}`, {}, job.status)}`;
   state.busy = ['queued', 'running'].includes(job.status);
   $('loading-overlay').hidden = !state.busy;
-  $('loading-title').textContent = t(job.type === 'profile' ? 'loading.profile' : 'loading.generate');
+  $('loading-title').textContent = t(job.type === 'profile' ? 'loading.profile' : job.type === 'style' ? 'loading.style' : 'loading.generate');
   $('loading-status-text').textContent = t(job.status === 'queued' ? 'loading.queued' : 'loading.running');
   renderLock();
 }
@@ -373,7 +439,7 @@ async function refreshCatalog() {
   renderCatalog();
 }
 
-function handleProfileJob(job) {
+function handleSingleJob(job) {
   if (state.job && job.id !== state.job.id) return;
   state.job = job;
   renderJobStatus();
@@ -384,7 +450,13 @@ function handleProfileJob(job) {
       state.resultUrls = outputUrls.map((outputUrl) => withBust(outputUrl));
       renderResults();
     }
-    refreshCatalog().catch(showError);
+    refreshCatalog().then(() => {
+      if (job.type === 'style' && job.result?.styleId) {
+        state.styleSelectionTouched = true;
+        state.selection.styleIds = [job.result.styleId];
+        renderCatalog();
+      }
+    }).catch(showError);
   } else if (job.status === 'failed') {
     showError(job.error, 'suggestion.job');
   }
@@ -421,9 +493,10 @@ async function reconcileBatchJobs() {
 
 function handleEventJob(job) {
   if (job.type === 'profile') {
-    handleProfileJob(job);
+    handleSingleJob(job);
     return;
   }
+  if (job.type === 'style') return handleSingleJob(job);
   if (job.batchId) handleBatchJob(job);
 }
 
@@ -576,7 +649,7 @@ async function submitProfile() {
       state.job = await api('/api/jobs/profile', { method: 'POST', body: JSON.stringify({ inputId: $('input-id').value }) });
     }
     $('profile-dialog').close();
-    handleProfileJob(state.job);
+    handleSingleJob(state.job);
   } catch (error) {
     showError(error, method === 'photos' ? 'suggestion.photos' : 'suggestion.prompt');
   }
@@ -589,8 +662,70 @@ async function deleteProfile(profileId) {
     await api(`/api/profiles/${encodeURIComponent(profileId)}`, { method: 'DELETE' });
     state.selection.profileIds = state.selection.profileIds.filter((id) => id !== profileId);
     await refreshCatalog();
+    await refreshHistory();
   } catch (error) {
     showError(error, 'suggestion.refresh');
+  }
+}
+
+async function deleteStyle(styleId) {
+  clearError();
+  if (!window.confirm(t('confirm.deleteStyle', { name: styleLabel(state.catalog.styles.find((item) => item.id === styleId) || { id: styleId, name: styleId }) }))) return;
+  try {
+    await api(`/api/styles/${encodeURIComponent(styleId)}`, { method: 'DELETE' });
+    state.selection.styleIds = state.selection.styleIds.filter((id) => id !== styleId);
+    await refreshCatalog();
+  } catch (error) {
+    showError(error, 'suggestion.style');
+  }
+}
+
+async function submitStyle(event) {
+  event.preventDefault();
+  clearError();
+  const prompt = $('style-prompt').value.trim();
+  if (!prompt) return showError({ code: 'STYLE_PROMPT_INVALID' });
+  try {
+    state.batch = null;
+    state.job = await api('/api/jobs/style', { method: 'POST', body: JSON.stringify({ prompt }) });
+    $('style-dialog').close();
+    handleSingleJob(state.job);
+  } catch (error) {
+    showError(error, 'suggestion.style');
+  }
+}
+
+function applyColumnRatio(ratio) {
+  state.columnRatio = normalizeColumnRatio(ratio);
+  const root = document.documentElement;
+  root.style.setProperty('--people-track', `${state.columnRatio[0]}fr`);
+  root.style.setProperty('--style-track', `${state.columnRatio[1]}fr`);
+  root.style.setProperty('--output-track', `${state.columnRatio[2]}fr`);
+}
+
+function saveColumnRatio() {
+  try { localStorage.setItem('photoclub.columnRatio', JSON.stringify(state.columnRatio)); } catch { /* Storage can be disabled. */ }
+}
+
+function setupColumnSeparators() {
+  for (const separator of document.querySelectorAll('.column-separator')) {
+    const boundary = Number(separator.dataset.boundary);
+    separator.addEventListener('pointerdown', (event) => {
+      if (matchMedia('(max-width: 1100px)').matches) return;
+      const startX = event.clientX;
+      const startRatio = [...state.columnRatio];
+      const width = $('profiles').closest('main').clientWidth;
+      separator.setPointerCapture(event.pointerId);
+      const move = (moveEvent) => applyColumnRatio(dragBoundary(startRatio, boundary, (moveEvent.clientX - startX) / width));
+      separator.addEventListener('pointermove', move);
+      separator.addEventListener('pointerup', () => { separator.removeEventListener('pointermove', move); saveColumnRatio(); }, { once: true });
+    });
+    separator.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+      event.preventDefault();
+      applyColumnRatio(dragBoundary(state.columnRatio, boundary, event.key === 'ArrowRight' ? 0.02 : -0.02));
+      saveColumnRatio();
+    });
   }
 }
 
@@ -625,6 +760,7 @@ async function start() {
     token = lease.token;
     setLease('owned');
     await refreshCatalog();
+    await refreshHistory();
     const events = new EventSource('/api/events');
     events.onopen = () => {
       if (state.batch) reconcileBatchJobs().catch((error) => showError(error, 'suggestion.job'));
@@ -672,6 +808,10 @@ $('orientations').addEventListener('change', (event) => {
   }
 });
 $('profile-open').addEventListener('click', () => $('profile-dialog').showModal());
+$('style-open').addEventListener('click', () => $('style-dialog').showModal());
+$('style-close').addEventListener('click', () => $('style-dialog').close());
+$('style-cancel').addEventListener('click', () => $('style-dialog').close());
+$('style-form').addEventListener('submit', submitStyle);
 $('help-open').addEventListener('click', () => $('help-dialog').showModal());
 $('help-close').addEventListener('click', () => $('help-dialog').close());
 $('profile-close').addEventListener('click', () => $('profile-dialog').close());
@@ -689,6 +829,7 @@ $('result-dialog').addEventListener('click', (event) => {
 });
 $('open-output').addEventListener('click', () => api('/api/open-output', { method: 'POST', body: '{}' }).catch(showError));
 $('open-input').addEventListener('click', () => api('/api/open-input', { method: 'POST', body: '{}' }).catch(showError));
+$('history-refresh').addEventListener('click', () => refreshHistory().catch(showError));
 $('lan-mode').addEventListener('change', async (event) => {
   try {
     await api('/api/network', { method: 'POST', body: JSON.stringify({ lan: event.target.checked }) });
@@ -704,4 +845,6 @@ window.addEventListener('pagehide', () => {
 });
 
 applyLanguage(state.language);
+applyColumnRatio(state.columnRatio);
+setupColumnSeparators();
 start();

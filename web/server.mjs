@@ -10,9 +10,11 @@ import { AppError, asAppError, errorPayload } from './lib/errors.mjs';
 import { LeaseManager } from './lib/lease.mjs';
 import { CUSTOM_FORMAT_ID, orientFormat, resolveCustomFormat } from './lib/outputformat.mjs';
 import { commitJobResult, SerialJobQueue } from './lib/queue.mjs';
-import { buildGeneratePrompt, buildProfilePrompt, buildPromptProfilePrompt, runCodexTask } from './lib/runner.mjs';
+import { buildGeneratePrompt, buildProfilePrompt, buildPromptProfilePrompt, buildStylePrompt, runCodexTask } from './lib/runner.mjs';
 import { syncStylePreview } from './lib/stylepreview.mjs';
 import { openTarget } from './lib/platform.mjs';
+import { publishStyleDraft } from './lib/styleplugin.mjs';
+import { createGenerationBatch, readGenerationHistory, reconcileGenerationBatch, updateGenerationBatch } from './lib/generationhistory.mjs';
 
 const WEB_DIR = path.dirname(fileURLToPath(import.meta.url));
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.heic']);
@@ -105,12 +107,13 @@ function sanitizeProfileResult({ profileId, outputUrl, outputUrls }) {
   return { profileId, outputUrl, outputUrls };
 }
 
-function sanitizeGenerateResult({ styleId, outputUrl, outputUrls, preview }) {
+function sanitizeGenerateResult({ styleId, outputUrl, outputUrls, preview, usage }) {
   return {
     styleId,
     outputUrl,
     outputUrls,
     ...(preview === undefined ? {} : { preview }),
+    ...(usage === undefined ? {} : { usage }),
   };
 }
 
@@ -118,6 +121,7 @@ export function buildGenerateBatchDefinitions({
   rootDir,
   profileIds,
   styleIds,
+  styleFingerprints = {},
   format,
   orientation,
   extraPrompt,
@@ -146,7 +150,7 @@ export function buildGenerateBatchDefinitions({
       styleId,
       batchIndex,
       batchSize: styleIds.length,
-      payload: { prompt, outputPaths, outputUrls },
+      payload: { prompt, outputPaths, outputUrls, styleFingerprint: styleFingerprints[styleId] },
     };
   });
 }
@@ -240,7 +244,22 @@ export function createControlServer({
       } catch (error) {
         if (job.payload.profileManifestPath) await unlink(job.payload.profileManifestPath).catch(() => {});
         if (job.payload.profileStagingPath) await unlink(job.payload.profileStagingPath).catch(() => {});
+        if (job.payload.styleStagingPath) await unlink(job.payload.styleStagingPath).catch(() => {});
+        if (job.type === 'generate' && job.batchId && error?.code === 'CODEX_QUOTA_EXHAUSTED') {
+          await reconcileGenerationBatch(rootDir, job.batchId).catch(() => {});
+          await updateGenerationBatch(rootDir, job.batchId, (batch) => ({ ...batch, status: 'paused_quota', error: { code: error.code, message: error.message } })).catch(() => {});
+          queue.cancelWaitingBatch(job.batchId);
+        }
         throw error;
+      }
+      if (job.type === 'style') {
+        try {
+          throwIfAborted(signal);
+          const published = await publishStyleDraft({ rootDir, stagingPath: job.payload.styleStagingPath });
+          return commitJobResult({ styleId: published.styleId });
+        } finally {
+          await unlink(job.payload.styleStagingPath).catch(() => {});
+        }
       }
       if (job.type === 'profile') {
         try {
@@ -303,6 +322,7 @@ export function createControlServer({
         const synced = await syncStylePreviewImpl({
           rootDir,
           styleId: job.styleId,
+          styleFingerprint: job.payload.styleFingerprint,
           outputPaths,
           jobId: job.id,
           generatedAt,
@@ -311,7 +331,7 @@ export function createControlServer({
         preview = synced?.preview;
       }
       return job.type === 'generate'
-        ? commitJobResult(sanitizeGenerateResult({ styleId: job.styleId, outputUrl: outputUrls[0], outputUrls, preview }))
+        ? commitJobResult(sanitizeGenerateResult({ styleId: job.styleId, outputUrl: outputUrls[0], outputUrls, preview, usage: result?.usage }))
         : sanitizeGenerateResult({ styleId: job.styleId, outputUrl: outputUrls[0], outputUrls, preview });
     },
   });
@@ -320,6 +340,30 @@ export function createControlServer({
     const line = `data: ${JSON.stringify(event)}\n\n`;
     for (const response of clients) response.write(line);
     if (['succeeded', 'failed', 'cancelled'].includes(event.job.status)) {
+      if (event.job.type === 'generate' && event.job.batchId) {
+        reconcileGenerationBatch(rootDir, event.job.batchId).then((batch) => {
+          if (!batch || batch.status === 'paused_quota') return;
+          if (event.job.result?.usage) {
+            const usage = event.job.result.usage;
+            return updateGenerationBatch(rootDir, batch.id, (currentBatch) => ({
+              ...currentBatch,
+              usage: {
+                inputTokens: (currentBatch.usage?.inputTokens ?? 0) + (usage.inputTokens ?? 0),
+                outputTokens: (currentBatch.usage?.outputTokens ?? 0) + (usage.outputTokens ?? 0),
+                totalTokens: (currentBatch.usage?.totalTokens ?? 0) + (usage.totalTokens ?? 0),
+              },
+            })).then(() => reconcileGenerationBatch(rootDir, batch.id));
+          }
+          return batch;
+        }).then((batch) => {
+          if (!batch || batch.status === 'paused_quota') return;
+          const related = queue.snapshot().jobs.filter((job) => job.batchId === event.job.batchId);
+          if (related.length && related.every((job) => ['succeeded', 'failed', 'cancelled'].includes(job.status))) {
+            const status = batch.completed === batch.total ? 'completed' : related.some((job) => job.status === 'failed') ? 'failed' : 'cancelled';
+            return updateGenerationBatch(rootDir, batch.id, (currentBatch) => ({ ...currentBatch, status }));
+          }
+        }).catch(() => {});
+      }
       const profileId = profileJobIds.get(event.job.id);
       if (profileId) {
         reservedProfileIds.delete(profileId);
@@ -375,6 +419,11 @@ export function createControlServer({
     if (request.method === 'GET' && pathname === '/api/jobs') {
       return sendJson(response, 200, queue.snapshot());
     }
+    if (request.method === 'GET' && pathname === '/api/generation-history') {
+      const history = await readGenerationHistory(rootDir);
+      for (const batch of history.batches.filter((item) => item.status === 'running')) await reconcileGenerationBatch(rootDir, batch.id);
+      return sendJson(response, 200, await readGenerationHistory(rootDir));
+    }
     if (request.method === 'GET' && pathname === '/api/events') {
       response.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache', connection: 'keep-alive' });
       response.flushHeaders();
@@ -429,13 +478,81 @@ export function createControlServer({
         rootDir,
         profileIds,
         styleIds,
+        styleFingerprints: Object.fromEntries(styles.map((style) => [style.id, style.fingerprint])),
         format,
         orientation,
         extraPrompt: body.extraPrompt,
         quantity: body.quantity,
       });
+      await createGenerationBatch(rootDir, {
+        id: batchId,
+        status: 'running',
+        total: jobDefinitions.reduce((sum, job) => sum + job.payload.outputPaths.length, 0),
+        completed: 0,
+        profileIds,
+        styles: styles.map((style) => ({ id: style.id, fingerprint: style.fingerprint })),
+        format,
+        orientation,
+        extraPrompt: body.extraPrompt,
+        quantity: body.quantity,
+        items: jobDefinitions.flatMap((job) => job.payload.outputPaths.map((outputPath, index) => ({
+          id: `${job.id}:${index}`,
+          styleId: job.styleId,
+          styleFingerprint: job.payload.styleFingerprint,
+          outputPath,
+          outputUrl: job.payload.outputUrls[index],
+          status: 'pending',
+        }))),
+      });
       const jobs = jobDefinitions.map((job) => queue.enqueue({ ...job, batchId }));
       return sendJson(response, 202, { batchId, jobs });
+    }
+    const resumeMatch = request.method === 'POST' && /^\/api\/generation-history\/([^/]+)\/resume$/u.exec(pathname);
+    if (resumeMatch) {
+      requireOwner(request);
+      const batchId = safeDecodePathSegment(resumeMatch[1], { code: 'BATCH_NOT_FOUND', message: '生成记录不存在' });
+      const batch = await reconcileGenerationBatch(rootDir, batchId);
+      if (!batch || !['paused_quota', 'interrupted', 'failed'].includes(batch.status)) throw new AppError('BATCH_NOT_RESUMABLE', '该生成记录不可继续', 409);
+      const catalog = await loadCatalog(rootDir);
+      if (!batch.profileIds.every((id) => catalog.profiles.some((profile) => profile.id === id))) throw new AppError('RESUME_INPUT_CHANGED', '人物设定已变化或不存在', 409);
+      for (const style of batch.styles) {
+        if (!catalog.styles.some((item) => item.id === style.id && item.fingerprint === style.fingerprint)) throw new AppError('RESUME_INPUT_CHANGED', '风格已变化或不存在', 409);
+      }
+      const definitions = batch.styles.flatMap((style, batchIndex) => {
+        const items = batch.items.filter((item) => item.styleId === style.id && item.status !== 'completed');
+        if (!items.length) return [];
+        const id = randomUUID();
+        return [{
+          id, type: 'generate', styleId: style.id, batchIndex, batchSize: batch.styles.length,
+          payload: {
+            outputPaths: items.map((item) => item.outputPath),
+            outputUrls: items.map((item) => item.outputUrl),
+            styleFingerprint: style.fingerprint,
+            prompt: buildGeneratePrompt({ rootDir, profileIds: batch.profileIds, styleId: style.id, format: batch.format, orientation: batch.orientation, extraPrompt: batch.extraPrompt, quantity: items.length, outputPaths: items.map((item) => item.outputPath) }),
+          },
+        }];
+      });
+      await updateGenerationBatch(rootDir, batchId, (currentBatch) => ({ ...currentBatch, status: 'running', error: null }));
+      const jobs = definitions.map((job) => queue.enqueue({ ...job, batchId }));
+      return sendJson(response, 202, { batchId, jobs });
+    }
+    if (request.method === 'POST' && pathname === '/api/jobs/style') {
+      requireOwner(request);
+      const body = await readJson(request);
+      if (typeof body.prompt !== 'string' || !body.prompt.trim() || body.prompt.length > 4_000) {
+        throw new AppError('STYLE_PROMPT_INVALID', '风格提示词不能为空且最多 4000 字', 400);
+      }
+      const id = randomUUID();
+      const styleStagingPath = path.join(rootDir, '.control', `style-${id}.json`);
+      await mkdir(path.dirname(styleStagingPath), { recursive: true });
+      return sendJson(response, 202, queue.enqueue({
+        id,
+        type: 'style',
+        payload: {
+          prompt: buildStylePrompt({ rootDir, description: body.prompt.trim(), stagingPath: styleStagingPath }),
+          styleStagingPath,
+        },
+      }));
     }
     if (request.method === 'POST' && pathname === '/api/jobs/profile') {
       requireOwner(request);
@@ -505,6 +622,15 @@ export function createControlServer({
       }
       return sendJson(response, 200, { deleted: true, profileId });
     }
+    const styleDeleteMatch = request.method === 'DELETE' && /^\/api\/styles\/([^/]+)$/.exec(pathname);
+    if (styleDeleteMatch) {
+      requireOwner(request);
+      const styleId = assertSafeId(safeDecodePathSegment(styleDeleteMatch[1]), '风格');
+      const catalog = await loadCatalog(rootDir);
+      if (!catalog.styles.some((item) => item.id === styleId)) throw new AppError('STYLE_NOT_FOUND', '风格不存在', 404);
+      await unlink(path.join(rootDir, 'styles', `${styleId}.md`));
+      return sendJson(response, 200, { deleted: true, styleId });
+    }
     const cancelMatch = request.method === 'DELETE' && /^\/api\/jobs\/([^/]+)$/.exec(pathname);
     if (cancelMatch) {
       requireOwner(request);
@@ -550,6 +676,7 @@ export function createControlServer({
     if (request.method === 'GET' && pathname === '/control.css') return serveFile(response, path.join(WEB_DIR, 'control.css'));
     if (request.method === 'GET' && pathname === '/control.js') return serveFile(response, path.join(WEB_DIR, 'control.js'));
     if (request.method === 'GET' && pathname === '/i18n.mjs') return serveFile(response, path.join(WEB_DIR, 'i18n.mjs'));
+    if (request.method === 'GET' && pathname === '/layout-columns.mjs') return serveFile(response, path.join(WEB_DIR, 'layout-columns.mjs'));
     const styleSelectionPath = resolveStyleSelectionPath(pathname);
     if (request.method === 'GET' && styleSelectionPath) return serveFile(response, styleSelectionPath);
     return sendJson(response, 404, errorPayload(new AppError('NOT_FOUND', '接口不存在', 404)));

@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { AppError, asAppError } from './errors.mjs';
 import { readStyleHistory } from './stylepreview.mjs';
+import { parseStylePlugin } from './styleplugin.mjs';
 
 const SAFE_ID = /^[A-Za-z0-9\u3040-\u30ff\u3400-\u9fff]+$/u;
 
@@ -104,6 +105,7 @@ function validateStyleHistory(rootDir, history) {
       !isNonEmptyString(record.sourcePath) ||
       !isNonEmptyString(record.preview) ||
       record.styleId !== styleId ||
+      (record.styleFingerprint !== undefined && !/^[a-f0-9]{64}$/u.test(record.styleFingerprint)) ||
       record.preview !== `styles/previews/${styleId}.jpg`) {
       throw new AppError('STYLE_HISTORY_INVALID', '风格历史无效', 422, { filePath });
     }
@@ -146,9 +148,10 @@ export async function loadCatalog(rootDir) {
   for (const entry of styleEntries.filter((item) => item.isFile() && item.name.endsWith('.md')).sort((a, b) => a.name.localeCompare(b.name))) {
     try {
       const markdown = await readFile(path.join(rootDir, 'styles', entry.name), 'utf8');
-      const style = parseStyleFrontmatter(markdown, entry.name);
+      const style = parseStylePlugin(markdown, entry.name);
       const historyRecord = history[style.id];
-      const generated = historyRecord !== undefined;
+      const generated = historyRecord !== undefined
+        && (historyRecord.styleFingerprint === undefined || historyRecord.styleFingerprint === style.fingerprint);
       let previewUrl = null;
 
       if (generated) {
@@ -171,6 +174,7 @@ export async function loadCatalog(rootDir) {
       styles.push({
         id: style.id,
         name: style.name,
+        fingerprint: style.fingerprint,
         generated,
         generatedAt: generated ? historyRecord.generatedAt ?? null : null,
         previewUrl,

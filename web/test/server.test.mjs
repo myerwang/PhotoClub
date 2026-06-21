@@ -24,9 +24,9 @@ async function fixture() {
   await writeFile(path.join(root, 'profiles/mama/multiview_reference.png'), 'profile');
   await writeFile(path.join(root, 'input/mama/a.jpg'), 'input');
   await writeFile(path.join(root, 'styles/sticker.png'), 'style');
-  await writeFile(path.join(root, 'styles/sticker.md'), '---\nstyle_id: sticker\nname: 贴纸\nthumbnail: sticker.png\n---\n');
+  await writeFile(path.join(root, 'styles/sticker.md'), '---\nstyle_id: sticker\nname: 贴纸\n---\n\n- Apply `system/rules/style_base.md`.\n');
   await writeFile(path.join(root, 'styles/film.png'), 'style');
-  await writeFile(path.join(root, 'styles/film.md'), '---\nstyle_id: film\nname: 胶片\nthumbnail: film.png\n---\n');
+  await writeFile(path.join(root, 'styles/film.md'), '---\nstyle_id: film\nname: 胶片\n---\n\n- Apply `system/rules/style_base.md`.\n');
   await writeFile(path.join(root, 'system/rules/output_formats.md'), '### `jp_l`\n- Status: active\n- Label: 7-Eleven L\n- Pixel size: `1051 x 1500`\n');
   await writeFile(path.join(root, 'output/result.png'), 'result');
   return root;
@@ -1038,6 +1038,48 @@ test('open-input only opens the fixed project input directory', async (t) => {
   });
   assert.equal(response.status, 200);
   assert.equal(calls[0], path.join(rootDir, 'input'));
+});
+
+test('creates a canonical style from a staged Codex result', async (t) => {
+  const rootDir = await fixture();
+  const { app, base } = await running({
+    rootDir,
+    runTaskImpl: async ({ prompt }) => {
+      const stagingPath = /JSON 写入 (.+?)，验证/u.exec(prompt)?.[1];
+      await writeFile(stagingPath, JSON.stringify({
+        id: 'rainfilm', name: '雨夜胶片', englishName: 'Rain Film', sourcePrompt: '雨夜胶片人像',
+        adaptations: ['删除固定人物'], visualRules: ['细腻胶片颗粒'],
+        composition: ['平视人像'], lighting: ['柔和霓虹灯'],
+      }));
+      return {};
+    },
+  });
+  t.after(() => app.close());
+  const owner = await acquire(base);
+  const response = await fetch(`${base}/api/jobs/style`, {
+    method: 'POST', headers: auth(owner), body: JSON.stringify({ prompt: '雨夜胶片人像' }),
+  });
+  assert.equal(response.status, 202);
+  const job = await response.json();
+  const finished = await waitForJob(app, job.id);
+  assert.equal(finished.status, 'succeeded');
+  assert.equal(finished.result.styleId, 'rainfilm');
+  assert.match(await readFile(path.join(rootDir, 'styles', 'rainfilm.md'), 'utf8'), /source_type: user/);
+});
+
+test('style deletion removes only the plugin MD', async (t) => {
+  const { app, base, rootDir } = await running();
+  t.after(() => app.close());
+  await mkdir(path.join(rootDir, '.control'), { recursive: true });
+  await mkdir(path.join(rootDir, 'styles', 'previews'), { recursive: true });
+  await writeFile(path.join(rootDir, '.control', 'style-history.json'), '{}');
+  await writeFile(path.join(rootDir, 'styles', 'previews', 'film.jpg'), 'preview');
+  const owner = await acquire(base);
+  const response = await fetch(`${base}/api/styles/film`, { method: 'DELETE', headers: auth(owner) });
+  assert.equal(response.status, 200);
+  await assert.rejects(access(path.join(rootDir, 'styles', 'film.md')));
+  await access(path.join(rootDir, '.control', 'style-history.json'));
+  await access(path.join(rootDir, 'styles', 'previews', 'film.jpg'));
 });
 
 test('SSE streams job state events', async (t) => {
