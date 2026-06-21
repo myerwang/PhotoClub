@@ -15,7 +15,7 @@ import {
 } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import * as childProcess from 'node:child_process';
+import { Jimp } from 'jimp';
 
 import { AppError } from './errors.mjs';
 
@@ -613,76 +613,18 @@ export async function readStyleHistory(rootDir) {
   }
 }
 
-export async function resizeWithSips(
+export async function resizePreviewImage(
   sourcePath,
   targetPath,
-  { signal, spawnImpl = childProcess.spawn } = {},
+  { signal, readImpl = (input) => Jimp.read(input) } = {},
 ) {
   throwIfAborted(signal);
-
-  return new Promise((resolve, reject) => {
-    const child = spawnImpl('/usr/bin/sips', [
-      '-s', 'format', 'jpeg',
-      '-Z', '480',
-      sourcePath,
-      '--out', targetPath,
-    ], { stdio: 'ignore' });
-
-    let settled = false;
-    let abortRequested = false;
-    let abortError;
-    const removeChildListener = (event, listener) => {
-      child.off?.(event, listener);
-      child.removeListener?.(event, listener);
-    };
-    const cleanup = () => {
-      signal?.removeEventListener('abort', abort);
-      removeChildListener('error', onError);
-      removeChildListener('close', onClose);
-    };
-    const finish = (callback, value) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      callback(value);
-    };
-    const fail = () => {
-      finish(reject, syncFailed('风格代表图缩放失败'));
-    };
-    const abort = () => {
-      if (abortRequested) return;
-      abortRequested = true;
-      abortError = cancellationReason(signal);
-      try {
-        child.kill();
-      } catch {
-        // Ignore child termination races during cancellation.
-      }
-    };
-    const onError = () => {
-      if (abortRequested) {
-        finish(reject, abortError);
-        return;
-      }
-      fail();
-    };
-    const onClose = (code) => {
-      if (abortRequested) {
-        finish(reject, abortError);
-        return;
-      }
-      if (code === 0) {
-        finish(resolve);
-        return;
-      }
-      fail();
-    };
-
-    child.once('error', onError);
-    child.once('close', onClose);
-    signal?.addEventListener('abort', abort, { once: true });
-    if (signal?.aborted) abort();
-  });
+  const image = await readImpl(sourcePath);
+  throwIfAborted(signal);
+  image.scaleToFit({ w: 480, h: 480 });
+  throwIfAborted(signal);
+  await image.write(targetPath);
+  throwIfAborted(signal);
 }
 
 export async function syncStylePreview({
@@ -691,7 +633,7 @@ export async function syncStylePreview({
   outputPaths,
   jobId,
   generatedAt = new Date().toISOString(),
-  resizeImpl = resizeWithSips,
+  resizeImpl = resizePreviewImage,
   signal,
   accessImpl = access,
   renameImpl = rename,

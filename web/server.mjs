@@ -1,5 +1,4 @@
 import http from 'node:http';
-import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
 import { access, lstat, mkdir, readFile, readdir, rename, rmdir, unlink, writeFile } from 'node:fs/promises';
@@ -13,6 +12,7 @@ import { CUSTOM_FORMAT_ID, orientFormat, resolveCustomFormat } from './lib/outpu
 import { commitJobResult, SerialJobQueue } from './lib/queue.mjs';
 import { buildGeneratePrompt, buildProfilePrompt, buildPromptProfilePrompt, runCodexTask } from './lib/runner.mjs';
 import { syncStylePreview } from './lib/stylepreview.mjs';
+import { openTarget } from './lib/platform.mjs';
 
 const WEB_DIR = path.dirname(fileURLToPath(import.meta.url));
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.heic']);
@@ -218,10 +218,7 @@ export function createControlServer({
   runTaskImpl = runCodexTask,
   syncStylePreviewImpl = syncStylePreview,
   beforeProfileCommitImpl = async () => {},
-  openImpl = (command, args) => {
-    const child = spawn(command, args, { stdio: 'ignore', detached: true });
-    child.unref();
-  },
+  openImpl = openTarget,
   now = Date.now,
   adminToken = randomUUID(),
   onClose = async () => {},
@@ -528,13 +525,13 @@ export function createControlServer({
     if (request.method === 'POST' && pathname === '/api/open-output') {
       requireOwner(request);
       await readJson(request);
-      openImpl('/usr/bin/open', [path.join(rootDir, 'output')]);
+      openImpl(path.join(rootDir, 'output'));
       return sendJson(response, 200, { opened: true });
     }
     if (request.method === 'POST' && pathname === '/api/open-input') {
       requireOwner(request);
       await readJson(request);
-      openImpl('/usr/bin/open', [path.join(rootDir, 'input')]);
+      openImpl(path.join(rootDir, 'input'));
       return sendJson(response, 200, { opened: true });
     }
     if (request.method === 'POST' && pathname === '/api/network') {
@@ -634,8 +631,7 @@ async function main() {
   await writeFile(statePath, JSON.stringify({ pid: process.pid, adminToken, ...address }, null, 2), { mode: 0o600 });
   process.stdout.write(`${JSON.stringify({ pid: process.pid, ...address })}\n`);
   if (args.includes('--open')) {
-    const child = spawn('/usr/bin/open', [address.url], { stdio: 'ignore', detached: true });
-    child.unref();
+    await openTarget(address.url);
   }
   const stop = async () => {
     await app.close();

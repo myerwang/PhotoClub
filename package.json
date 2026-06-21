@@ -4,8 +4,11 @@
   "type": "module",
   "scripts": {
     "test": "node --test web/test/*.test.mjs",
-    "start": "node web/server.mjs",
+    "start": "node system/tools/bootstrap.mjs --open",
     "stylebatch": "node system/tools/stylebatch.mjs",
     "stylepreview": "node system/tools/syncstylepreview.mjs"
+  },
+  "dependencies": {
+    "jimp": "1.6.0"
   }
 }

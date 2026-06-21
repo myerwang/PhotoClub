@@ -3,8 +3,6 @@ import path from 'node:path';
 
 import { AppError } from './errors.mjs';
 
-const DEFAULT_CODEX_PATH = '/Applications/Codex.app/Contents/Resources/codex';
-
 function noApiKeyEnvironment(env) {
   const sanitized = { ...env };
   delete sanitized.OPENAI_API_KEY;
@@ -43,21 +41,22 @@ function invoke({ codexPath, args, env, spawnImpl, signal }) {
 export async function runCodexTask({
   prompt,
   rootDir,
-  codexPath = DEFAULT_CODEX_PATH,
+  codexPath,
   miniModel = process.env.PHOTO_CODEX_MINI_MODEL || '',
   env = process.env,
   spawnImpl = spawn,
   signal,
 }) {
+  const executable = codexPath || env.PHOTO_CODEX_PATH || 'codex';
   const baseArgs = [
     'exec', '--skip-git-repo-check', '-C', rootDir,
     '-s', 'workspace-write', '--json',
   ];
   const firstArgs = [...baseArgs, ...(miniModel ? ['-m', miniModel] : []), prompt];
-  let result = await invoke({ codexPath, args: firstArgs, env, spawnImpl, signal });
+  let result = await invoke({ codexPath: executable, args: firstArgs, env, spawnImpl, signal });
 
   if (result.code !== 0 && miniModel && /unknown\s+model|model.+not found/i.test(result.stderr)) {
-    result = await invoke({ codexPath, args: [...baseArgs, prompt], env, spawnImpl, signal });
+    result = await invoke({ codexPath: executable, args: [...baseArgs, prompt], env, spawnImpl, signal });
   }
   if (result.code !== 0) {
     throw new AppError('CODEX_TASK_FAILED', '独立 Codex 任务执行失败', 500, {
@@ -79,7 +78,7 @@ function standardMultiviewRequirements() {
 禁止全身、半身、腰部以上、纯脸部、广角透视、俯拍、仰拍、混合比例、文字标签、边框、分隔线、道具和装饰。人物设定中不得包含任何风格内容或提示词。`;
 }
 
-export function buildGeneratePrompt({ rootDir = '/Users/yohji/photo', profileIds, styleId, format, orientation = 'portrait', extraPrompt = '', quantity = 1, outputPaths }) {
+export function buildGeneratePrompt({ rootDir = process.cwd(), profileIds, styleId, format, orientation = 'portrait', extraPrompt = '', quantity = 1, outputPaths }) {
   const identities = profileIds.map((profileId, index) =>
     `${index + 1}. 人物 ${profileId}：${path.join(rootDir, 'profiles', profileId, 'multiview_reference.png')}`,
   ).join('\n');
@@ -89,13 +88,13 @@ export function buildGeneratePrompt({ rootDir = '/Users/yohji/photo', profileIds
   return `在照片项目中生成最终风格照片。\n\n${imageGenerationRequirements()}\n\n身份输入：只使用以下人物多视图文件，禁止读取或使用 input 目录原图：\n${identities}\n\n每个人只能对应自己的多视图参考。直接把所有列出的多视图参考图一并喂给图像模型；不要用文字描写或重建五官；不得混合、互换、复制或遗漏人物身份。每张结果都必须让所有选中人物同时出现在同一张照片中，形成多人物合照。\n风格规则：读取并严格执行 ${stylePath}。风格规则不得限制人物属性。\n输出格式：${format.id}，照片方向为${orientationLabel}，每张最终文件必须原生构图并精确生成为 ${format.width} x ${format.height} 像素。不得先按另一方向生成后旋转或裁切。不要因照片方向增加白边或通用安全边距；安全边距仅在所选风格规则明确要求时应用。\n本次临时要求：${extraPrompt.trim() || '无'}。本次要求只用于当前任务，不得写回风格文件。\n生成数量：严格生成 ${quantity} 张。每张图片必须分别调用一次内置 image_gen，不能把多张结果拼成一张图。\n最终路径按顺序保存：\n${targets}\n验证每个目标文件均存在且可读后才能结束任务。`;
 }
 
-export function buildProfilePrompt({ rootDir = '/Users/yohji/photo', inputId, imagePaths, outputPath }) {
+export function buildProfilePrompt({ rootDir = process.cwd(), inputId, imagePaths, outputPath }) {
   const finalPath = outputPath ?? path.join(rootDir, 'profiles', inputId, 'multiview_reference.png');
   const references = imagePaths.map((imagePath, index) => `${index + 1}. ${imagePath}`).join('\n');
   return `为人物 ${inputId} 生成人物设定多视图。\n\n${imageGenerationRequirements()}\n\n以下所有图片都是同一个人，必须逐一作为直接图片参考输入并明确按编号关联到同一身份，不得从文字描述五官：\n${references}\n\n${standardMultiviewRequirements()}\n最终路径：${finalPath}。同名重新生成时直接覆盖该 multiview_reference.png；只保存这一张成果图。`;
 }
 
-export function buildPromptProfilePrompt({ rootDir = '/Users/yohji/photo', profileId, description, outputPath, stagingPath, manifestPath, existingProfileIds = [] }) {
+export function buildPromptProfilePrompt({ rootDir = process.cwd(), profileId, description, outputPath, stagingPath, manifestPath, existingProfileIds = [] }) {
   const naming = profileId
     ? `人物名称已指定为 ${profileId}，不得改名。`
     : `用户未指定人物名称。请在判断人物身份后自行确定一个简短、明确的名称：真实人物使用能够确认的常用姓名；原创虚构人物根据设定命名。名称必须是单个连续标识，只能包含中文、英文字母、数字或日文假名，不能包含空格、下划线、连字符或标点。不得使用这些已有名称：${existingProfileIds.join('、') || '无'}；如冲突需另选名称。`;

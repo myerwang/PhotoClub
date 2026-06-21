@@ -4,13 +4,11 @@
 
 ## 启动
 
-需要 macOS、Node.js，以及已登录的 Codex 桌面应用。
+唯一前提是已经安装并登录 Codex 桌面版，支持 macOS、Windows 和 Linux。不需要预装 Node.js、npm、pnpm、Python、图片工具或系统包管理器。
 
-```bash
-npm start
-```
+在 Codex 桌面版中打开本项目并输入“启动 PhotoClub”。启动 Skill 会使用 Codex 内置运行时检测环境、自动安装项目本地依赖、启动服务、完成健康检查并通过系统默认浏览器打开控制台。
 
-服务会启动本地控制页面。完整使用方法见 [`docs/SYSTEM_USAGE.md`](docs/SYSTEM_USAGE.md)。
+环境安装不会调用 Homebrew、winget、apt 或管理员权限，也不会读取或要求 API Key。
 
 ## 隐私目录
 

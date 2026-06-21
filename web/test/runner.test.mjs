@@ -42,6 +42,19 @@ test('uses codex exec with workspace-write and never passes an API key', async (
   assert.equal('OPENAI_API_KEY' in calls[0].options.env, false);
 });
 
+test('uses the Codex executable supplied by bootstrap', async () => {
+  const calls = [];
+  await runCodexTask({
+    prompt: 'task', rootDir: '/workspace', miniModel: '',
+    env: { PHOTO_CODEX_PATH: '/portable/Codex/codex' },
+    spawnImpl: (command) => {
+      calls.push(command);
+      return childResult();
+    },
+  });
+  assert.deepEqual(calls, ['/portable/Codex/codex']);
+});
+
 test('tries the configured mini model before default fallback', async () => {
   const calls = [];
   await runCodexTask({

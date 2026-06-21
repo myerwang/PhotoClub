@@ -1,25 +1,33 @@
 ---
 name: control
-description: Use when starting, locally deploying, opening, force-releasing, or stopping the photo generation control console in /Users/yohji/photo, including requests to open the HTML control page in the system default browser.
+description: Use when starting, checking, opening, force-releasing, or stopping the PhotoClub control console from Codex Desktop on macOS, Windows, or Linux.
 ---
 
-# 同框照相馆
+# PhotoClub Control
 
-Operate the local control page through the Node server. Do not use the Codex in-app browser for the official launch.
+Codex Desktop is the only system prerequisite. Never require a system Node.js, npm, pnpm, Python, image utility, package manager, administrator permission, or API key.
 
 ## Start
 
-1. Verify `node --version` and `/Applications/Codex.app/Contents/Resources/codex --version` succeed.
-2. Run in a managed PTY so the process remains attached to the current execution session:
+1. Resolve the repository root relative to this `SKILL.md`: ascend from `system/skills/control/` to the repository root. Do not assume the current directory or a user-specific path.
+2. Call `codex_app__load_workspace_dependencies` and read its bundled Node.js, pnpm, and native-binary paths.
+3. Run the bootstrap with those exact paths. Quote every path:
 
    ```bash
-   node web/server.mjs --root /Users/yohji/photo --port 0 --open
+   "<bundled-node>" "<root>/system/tools/bootstrap.mjs" --root "<root>" --pnpm "<bundled-pnpm>" --native-bin "<bundled-native-bin>" --port 0 --open
    ```
 
-3. Read the first JSON output line and report its `pid` and `url`.
-4. Confirm `/api/health` returns HTTP 200.
+4. Bootstrap detects dependencies, installs missing locked project dependencies locally, locates the Codex Desktop CLI, starts the server, and checks `/api/health` before returning.
+5. Read the JSON result. Report `url`, `pid`, dependency installation status, and the detected runtime paths. A result with `ok: false` must be reported with its `stage` and `error`; do not bypass the failed check.
 
-`--open` must invoke macOS `/usr/bin/open`, which opens the system default browser. Never substitute the Codex in-app browser.
+`--open` uses the operating system's default browser on macOS, Windows, and Linux. Do not substitute the Codex in-app browser for the official launch.
+
+## Installation Rules
+
+- Installation is limited to dependencies declared in the committed lockfile and written under the repository.
+- Never invoke Homebrew, winget, apt, dnf, pacman, sudo, or global package installation.
+- Reuse an already valid local installation; do not reinstall on every start.
+- If installation cannot complete, stop and report the bootstrap `dependencies` error.
 
 ## Security And Lifetime
 
@@ -36,13 +44,13 @@ Operate the local control page through the Node server. Do not use the Codex in-
 Force-release a stale page lease without stopping the server:
 
 ```bash
-node web/server.mjs --root /Users/yohji/photo --release
+"<bundled-node>" "<root>/system/tools/bootstrap.mjs" --root "<root>" --pnpm "<bundled-pnpm>" --release
 ```
 
 Stop the server:
 
 ```bash
-node web/server.mjs --root /Users/yohji/photo --stop
+"<bundled-node>" "<root>/system/tools/bootstrap.mjs" --root "<root>" --pnpm "<bundled-pnpm>" --stop
 ```
 
 If the state file is missing, report that no managed control server is running. Do not kill unrelated Node or Codex processes.

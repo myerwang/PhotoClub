@@ -28,7 +28,7 @@ Character profiles must not store source-photo copies, markdown records, style r
 
 When creating a new character profile:
 
-1. In photo-directory mode, each direct child directory under `/Users/yohji/photo/input/` represents one person and its name is the profile id.
+1. In photo-directory mode, each direct child directory under `<root>/input/` represents one person and its name is the profile id.
 2. In text-description mode, use the specified name when present. When omitted, let the same AI task infer a recognizable real-person name or create a concise fictional-character name, avoiding existing profile ids.
 3. A specified existing name replaces its `multiview_reference.png` directly.
 4. Keep input directory names and profile directory names simple single tokens without underscores or hyphens.
@@ -78,9 +78,9 @@ This chest-up framing is mandatory for character-profile creation only. It exist
 
 Rules for photo-directory mode:
 
-- Use all usable original files under `/Users/yohji/photo/input/<person>/` directly when creating the profile and its multiview reference.
+- Use all usable original files under `<root>/input/<person>/` directly when creating the profile and its multiview reference.
 - Tell the image model that every image in the selected input directory is the same person.
-- A profile must not be created from loose image files directly under `/Users/yohji/photo/input/`; those files must first be moved into a person directory.
+- A profile must not be created from loose image files directly under `<root>/input/`; those files must first be moved into a person directory.
 - Generate the multiview reference from direct image input, not from written facial feature descriptions.
 - Generate the multiview reference with the mandatory `2 x 3` chest-up bust layout above even when source photos use other crops.
 - The only generated output of character-profile creation is `multiview_reference.png`.

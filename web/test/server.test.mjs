@@ -1018,26 +1018,26 @@ test('authenticated batch cancel only cancels matching batch jobs and leaves lat
 
 test('open-output cannot accept a caller supplied path', async (t) => {
   const calls = [];
-  const { app, base, rootDir } = await running({ openImpl: (command, args) => calls.push({ command, args }) });
+  const { app, base, rootDir } = await running({ openImpl: (target) => calls.push(target) });
   t.after(() => app.close());
   const owner = await acquire(base);
   const response = await fetch(`${base}/api/open-output`, {
     method: 'POST', headers: auth(owner), body: JSON.stringify({ path: '/etc' }),
   });
   assert.equal(response.status, 200);
-  assert.deepEqual(calls[0], { command: '/usr/bin/open', args: [path.join(rootDir, 'output')] });
+  assert.equal(calls[0], path.join(rootDir, 'output'));
 });
 
 test('open-input only opens the fixed project input directory', async (t) => {
   const calls = [];
-  const { app, base, rootDir } = await running({ openImpl: (command, args) => calls.push({ command, args }) });
+  const { app, base, rootDir } = await running({ openImpl: (target) => calls.push(target) });
   t.after(() => app.close());
   const owner = await acquire(base);
   const response = await fetch(`${base}/api/open-input`, {
     method: 'POST', headers: auth(owner), body: JSON.stringify({ path: '/etc' }),
   });
   assert.equal(response.status, 200);
-  assert.deepEqual(calls[0], { command: '/usr/bin/open', args: [path.join(rootDir, 'input')] });
+  assert.equal(calls[0], path.join(rootDir, 'input'));
 });
 
 test('SSE streams job state events', async (t) => {

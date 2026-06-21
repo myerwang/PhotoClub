@@ -5,7 +5,7 @@ description: Use when creating, replacing, organizing, or using character-consis
 
 # Character Profile Workflow
 
-Use this project skill for character-consistent photo generation in `/Users/yohji/photo`.
+Use this project skill for character-consistent photo generation from the PhotoClub repository root (`<root>`).
 
 Normal sessions should start with `system/skills/start/SKILL.md`.
 
@@ -68,9 +68,9 @@ For the sticker style, use the reusable default of 3 columns x 5 rows and 15 sti
 - Output format must be explicitly specified.
 - Read `system/rules/output_formats.md` at runtime and dynamically resolve every active format. It is the sole authority for registered preset availability, dimensions, and orientation; do not copy its registry into this skill. A validated one-request custom target comes from the current request and is not a registry entry.
 - Apply any print bleed/safe-margin requirements from the selected style rule, not from the output photo format.
-- User-provided source photos live under `/Users/yohji/photo/input/`.
-- Generated deliverables go directly under `/Users/yohji/photo/output/` unless they are being approved into `profiles/`.
-- Do not create subfolders inside `/Users/yohji/photo/output/` for finished outputs. One completed image means one image file copied or moved directly into `output/`.
+- User-provided source photos live under `<root>/input/`.
+- Generated deliverables go directly under `<root>/output/` unless they are being approved into `profiles/`.
+- Do not create subfolders inside `<root>/output/` for finished outputs. One completed image means one image file copied or moved directly into `output/`.
 - Use plain white background.
 - Each sticker is an independent island.
 - Thick white border, thin light-gray die-cut guide, subtle edge effect.
@@ -116,11 +116,11 @@ Forbidden:
 
 When creating a new profile:
 
-1. Select one direct child directory under `/Users/yohji/photo/input/`.
+1. Select one direct child directory under `<root>/input/`.
 2. Treat that directory as one person.
 3. Use every usable image file inside that directory as direct image input.
 4. Use the input directory name directly as the display name and profile id.
-5. Do not create profiles from loose image files directly under `/Users/yohji/photo/input/`.
+5. Do not create profiles from loose image files directly under `<root>/input/`.
 6. Snapshot `$HOME/.codex/generated_images` before calling built-in `image_gen`.
 7. After generation, compare snapshots to find the new generated image file.
 8. Tell the image model that every input image in the directory is the same person.

@@ -5,7 +5,7 @@ description: Use when starting this photo generation system, checking what is mi
 
 # Start Generation Session
 
-Use this as the entry skill for `/Users/yohji/photo`.
+Use this as the generation entry skill from the PhotoClub repository root.
 
 This skill does not generate images. It collects choices and blocks generation until the required selections are complete.
 
@@ -17,7 +17,6 @@ Read these first:
 2. `system/rules/character_identity_base.md`
 3. `system/rules/family_sticker_composition.md`
 4. `styles/`
-5. `docs/SYSTEM_USAGE.md`
 
 Then verify the selected `profiles/<name>/multiview_reference.png` before handing off to generation.
 
@@ -62,7 +61,7 @@ If no character profile records exist, do not offer style or format yet. Offer o
 
 When creating a new character profile:
 
-- List direct child directories under `/Users/yohji/photo/input/`.
+- List direct child directories under `<root>/input/`.
 - Treat each `input/<name>/` directory as one person.
 - Use all usable images inside the selected directory as direct image inputs.
 - Tell the image model that all images inside that directory are the same person.

@@ -10,7 +10,7 @@ Physical-size compatibility notes may describe standards such as Japanese photo 
 
 The old ratio reference is retained only as an L-size fallback dimension check:
 
-`/Users/yohji/photo/比例参考/输出照片比例参考.png`
+`<root>/比例参考/输出照片比例参考.png`
 
 Rules:
 

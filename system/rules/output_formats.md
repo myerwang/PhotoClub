@@ -16,7 +16,7 @@ The registry remains the authority for presets. If the user supplies neither an 
 - Orientation: selectable (`portrait` or `landscape`)
 - Pixel basis: 300 dpi, rounded to nearest whole pixel
 - Size source: 7-Eleven photo print supports L/2L photo paper; Japanese L print standard is 89 x 127 mm
-- Ratio-source fallback: `/Users/yohji/photo/比例参考/输出照片比例参考.png`
+- Ratio-source fallback: `<root>/比例参考/输出照片比例参考.png`
 - Ratio-source fallback usage: dimensions only
 - Default use: printable sticker sheets and photo-style outputs intended for this L-size print workflow
 

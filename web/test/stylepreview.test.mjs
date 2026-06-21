@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { EventEmitter } from 'node:events';
 import { constants } from 'node:fs';
 import {
   access,
@@ -21,7 +20,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { AppError } from '../lib/errors.mjs';
-import { readStyleHistory, resizeWithSips, syncStylePreview } from '../lib/stylepreview.mjs';
+import { readStyleHistory, resizePreviewImage, syncStylePreview } from '../lib/stylepreview.mjs';
 
 async function createRoot() {
   return mkdtemp(path.join(tmpdir(), 'style-preview-'));
@@ -46,37 +45,6 @@ function deferred() {
     reject = rejectPromise;
   });
   return { promise, reject, resolve };
-}
-
-function createSignalDouble() {
-  let aborted = false;
-  let reason;
-  const listeners = new Set();
-
-  return {
-    signal: {
-      addEventListener(type, listener) {
-        if (type === 'abort') listeners.add(listener);
-      },
-      get aborted() {
-        return aborted;
-      },
-      get reason() {
-        return reason;
-      },
-      removeEventListener(type, listener) {
-        if (type === 'abort') listeners.delete(listener);
-      },
-    },
-    abort(nextReason) {
-      aborted = true;
-      reason = nextReason;
-      for (const listener of [...listeners]) listener();
-    },
-    get listenerCount() {
-      return listeners.size;
-    },
-  };
 }
 
 async function waitFor(predicate, message) {
@@ -393,92 +361,39 @@ test('syncStylePreview stores the local process pid in its lease', async () => {
   assert.equal(typeof lease.ownerToken, 'string');
 });
 
-test('resizeWithSips rejects immediately when signal is already aborted', async () => {
+test('resizePreviewImage rejects immediately when signal is already aborted', async () => {
   const controller = new AbortController();
   const reason = new Error('cancel before spawn');
   controller.abort(reason);
 
   await assert.rejects(
-    resizeWithSips('/tmp/source-does-not-matter', '/tmp/target-does-not-matter', { signal: controller.signal }),
+    resizePreviewImage('/tmp/source-does-not-matter', '/tmp/target-does-not-matter', { signal: controller.signal }),
     (error) => error === reason,
   );
 });
 
-test('resizeWithSips waits for child exit before rejecting an in-flight abort', async () => {
-  const child = new EventEmitter();
-  const signalDouble = createSignalDouble();
-  const cancelReason = new Error('cancel while resizing');
-  const observed = [];
-  child.killCalls = 0;
-  child.kill = () => {
-    child.killCalls += 1;
-    return true;
+test('resizePreviewImage reads, bounds, and writes through the portable image engine', async () => {
+  const calls = [];
+  const image = {
+    scaleToFit(options) {
+      calls.push(['scaleToFit', options]);
+      return this;
+    },
+    async write(targetPath) {
+      calls.push(['write', targetPath]);
+    },
   };
-
-  const operation = resizeWithSips('/tmp/source-does-not-matter', '/tmp/target-does-not-matter', {
-    signal: signalDouble.signal,
-    spawnImpl: () => child,
+  await resizePreviewImage('/tmp/source.png', '/tmp/preview.jpg', {
+    readImpl: async (sourcePath) => {
+      calls.push(['read', sourcePath]);
+      return image;
+    },
   });
-  operation.then(
-    () => observed.push('resolved'),
-    (error) => observed.push(error),
-  );
-
-  signalDouble.abort(cancelReason);
-
-  assert.equal(child.killCalls, 1);
-  assert.equal(signalDouble.listenerCount, 1);
-  assert.equal(child.listenerCount('close'), 1);
-  assert.equal(child.listenerCount('error'), 1);
-  assert.deepEqual(
-    await Promise.race([
-      operation.then(
-        () => ({ status: 'resolved' }),
-        (error) => ({ status: 'rejected', error }),
-      ),
-      new Promise((resolve) => setTimeout(() => resolve({ status: 'pending' }), 20)),
-    ]),
-    { status: 'pending' },
-  );
-
-  child.emit('close', 1);
-  await assert.rejects(operation, (error) => error === cancelReason);
-  await new Promise((resolve) => setImmediate(resolve));
-
-  assert.deepEqual(observed, [cancelReason]);
-  assert.equal(signalDouble.listenerCount, 0);
-  assert.equal(child.listenerCount('close'), 0);
-  assert.equal(child.listenerCount('error'), 0);
-
-  child.emit('close', 1);
-  child.on('error', () => {});
-  child.emit('error', new Error('late'));
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.deepEqual(observed, [cancelReason]);
-});
-
-test('resizeWithSips rejects with JOB_CANCELLED after close when aborted with a null reason', async () => {
-  const child = new EventEmitter();
-  const signalDouble = createSignalDouble();
-  child.killCalls = 0;
-  child.kill = () => {
-    child.killCalls += 1;
-    return true;
-  };
-
-  const operation = resizeWithSips('/tmp/source-does-not-matter', '/tmp/target-does-not-matter', {
-    signal: signalDouble.signal,
-    spawnImpl: () => child,
-  });
-
-  signalDouble.abort(null);
-  assert.equal(child.killCalls, 1);
-
-  child.emit('close', 0);
-  await assert.rejects(
-    operation,
-    (error) => error instanceof AppError && error.code === 'JOB_CANCELLED',
-  );
+  assert.deepEqual(calls, [
+    ['read', '/tmp/source.png'],
+    ['scaleToFit', { w: 480, h: 480 }],
+    ['write', '/tmp/preview.jpg'],
+  ]);
 });
 
 test('syncStylePreview rejects with JOB_CANCELLED before starting when signal is already aborted', async () => {
@@ -1977,9 +1892,6 @@ test('syncStylePreview rejects unreadable source paths', async () => {
   assert.deepEqual(await readStyleHistory(rootDir), {});
 });
 
-const sipsAvailable = await access('/usr/bin/sips', constants.X_OK).then(() => true, () => false);
-const cliStylePreviewTest = sipsAvailable ? test : test.skip;
-
 test('package.json exposes the stylepreview script', async () => {
   const packageJson = JSON.parse(await readFile(path.resolve('package.json'), 'utf8'));
   assert.equal(packageJson.scripts.stylepreview, 'node system/tools/syncstylepreview.mjs');
@@ -2013,7 +1925,7 @@ test('stylepreview fails fast with usage for missing and malformed arguments', a
   assert.match(empty.stderr.trim(), /^usage: stylepreview /u);
 });
 
-cliStylePreviewTest('stylepreview prints one JSON line for the last output', async () => {
+test('stylepreview prints one JSON line for the last output', async () => {
   const rootDir = await createRoot();
   const firstOutput = await writeTinyBmp(path.join(rootDir, 'output', 'first.bmp'), 240, 80, 80);
   const lastOutput = await writeTinyBmp(path.join(rootDir, 'output', 'last.bmp'), 80, 120, 240);
@@ -2026,7 +1938,7 @@ cliStylePreviewTest('stylepreview prints one JSON line for the last output', asy
     '--root', rootDir,
   ]);
 
-  assert.equal(result.exitCode, 0);
+  assert.equal(result.exitCode, 0, result.stderr);
   assert.equal(result.stderr, '');
   const lines = result.stdout.trim().split('\n');
   assert.equal(lines.length, 1);
@@ -2038,7 +1950,7 @@ cliStylePreviewTest('stylepreview prints one JSON line for the last output', asy
   await access(path.join(rootDir, 'styles', 'previews', 'sticker.jpg'), constants.F_OK);
 });
 
-cliStylePreviewTest('stylepreview fails cleanly for missing required args', async () => {
+test('stylepreview fails cleanly for missing required args', async () => {
   const result = await runStylePreviewScript([
     '--job', 'job-1',
     '--output', 'output/last.bmp',
