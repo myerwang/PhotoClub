@@ -1,7 +1,6 @@
 ---
 style_id: buttons
 name: 彩钮时尚
-thumbnail: buttons.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

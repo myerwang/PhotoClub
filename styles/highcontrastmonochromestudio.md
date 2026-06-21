@@ -1,7 +1,6 @@
 ---
 style_id: highcontrastmonochromestudio
 name: High-Contrast Monochrome Studio Portrait
-thumbnail: highcontrastmonochromestudio.png
 source_url: https://github.com/gpt-image2/awesome-gptimage2-prompts
 source_title: gpt-image2/awesome-gptimage2-prompts
 source_result: 34

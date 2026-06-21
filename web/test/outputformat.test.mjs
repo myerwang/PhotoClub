@@ -53,7 +53,7 @@ test('rejects an invalid orientation', () => {
   });
 });
 
-test('rejects invalid preset dimensions', () => {
+test('rejects invalid preset dimensions with a format-neutral error', () => {
   for (const preset of [
     { width: 0, height: 1800 },
     { width: -1, height: 1800 },
@@ -77,7 +77,8 @@ test('rejects invalid preset dimensions', () => {
     [],
   ]) {
     assert.throws(() => orientFormat(preset, 'portrait'), (error) => {
-      assertAppError(error, 'CUSTOM_FORMAT_INVALID');
+      assertAppError(error, 'FORMAT_INVALID', 500);
+      assert.equal(error.message, '输出格式尺寸无效');
       return true;
     });
   }
@@ -104,6 +105,25 @@ test('returns portrait and landscape custom formats', () => {
     width: 512,
     height: 256,
   });
+});
+
+test('resolveCustomFormat does not mutate frozen custom input', () => {
+  const customFormat = Object.freeze({
+    shortEdge: 256,
+    longEdge: 512,
+    label: 'custom source',
+  });
+  const snapshot = structuredClone(customFormat);
+
+  const resolved = resolveCustomFormat(customFormat, 'portrait');
+
+  assert.deepEqual(resolved, {
+    id: 'custom_256x512',
+    label: 'Custom 256 x 512',
+    width: 256,
+    height: 512,
+  });
+  assert.deepEqual(customFormat, snapshot);
 });
 
 test('accepts the largest long edge when the area stays within 40 million pixels', () => {

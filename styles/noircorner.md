@@ -1,7 +1,6 @@
 ---
 style_id: noircorner
 name: 雨夜黑色电影
-thumbnail: noircorner.png
 source_url: https://github.com/wuyoscar/GPT-Image2-Skill
 source_title: GPT Image 2 Prompt Gallery + Agentic Skill + CLI
 source_result: 6

@@ -1,7 +1,6 @@
 ---
 style_id: tokyofilm
 name: 东京胶片
-thumbnail: tokyofilm.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

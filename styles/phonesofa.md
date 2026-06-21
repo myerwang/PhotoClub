@@ -1,7 +1,6 @@
 ---
 style_id: phonesofa
 name: 手机夜光
-thumbnail: phonesofa.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

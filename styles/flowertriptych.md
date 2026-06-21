@@ -1,7 +1,6 @@
 ---
 style_id: flowertriptych
 name: 花田三联
-thumbnail: flowertriptych.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

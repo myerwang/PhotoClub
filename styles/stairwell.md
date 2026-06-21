@@ -1,7 +1,6 @@
 ---
 style_id: stairwell
 name: 楼梯间唱片
-thumbnail: stairwell.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

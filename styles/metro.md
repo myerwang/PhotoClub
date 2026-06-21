@@ -1,7 +1,6 @@
 ---
 style_id: metro
 name: 地铁晨光
-thumbnail: metro.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

@@ -1,7 +1,6 @@
 ---
 style_id: rawmetro
 name: 原生地铁
-thumbnail: rawmetro.png
 source_url: https://github.com/wuyoscar/GPT-Image2-Skill
 source_title: GPT Image 2 Prompt Gallery + Agentic Skill + CLI
 source_result: 6

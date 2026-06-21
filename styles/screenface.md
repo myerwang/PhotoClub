@@ -1,7 +1,6 @@
 ---
 style_id: screenface
 name: 屏幕遮脸
-thumbnail: screenface.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

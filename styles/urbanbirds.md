@@ -1,7 +1,6 @@
 ---
 style_id: urbanbirds
 name: 都市飞鸟
-thumbnail: urbanbirds.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

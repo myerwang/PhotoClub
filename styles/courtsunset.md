@@ -1,7 +1,6 @@
 ---
 style_id: courtsunset
 name: 球场日落
-thumbnail: courtsunset.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

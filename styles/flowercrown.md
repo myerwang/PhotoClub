@@ -1,7 +1,6 @@
 ---
 style_id: flowercrown
 name: 花冠仙境
-thumbnail: flowercrown.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

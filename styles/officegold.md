@@ -1,7 +1,6 @@
 ---
 style_id: officegold
 name: 黎明办公室金光
-thumbnail: officegold.png
 source_url: https://note.com/old_pgmrs_will/n/n1b2a6b98aa96
 source_title: GPT-Image-2最強プロンプト術｜いにしえ@AIクリエイター
 source_result: 31

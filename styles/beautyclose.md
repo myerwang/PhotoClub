@@ -1,7 +1,6 @@
 ---
 style_id: beautyclose
 name: 自然光美妆特写
-thumbnail: beautyclose.png
 source_url: https://www.media.io/ai/explore/zone/gpt-image-2-prompts
 source_title: GPT Image 2 Prompts
 source_result: 27

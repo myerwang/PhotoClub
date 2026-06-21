@@ -6,6 +6,10 @@ function invalidCustomFormat(message, details) {
   return new AppError('CUSTOM_FORMAT_INVALID', message, 400, details);
 }
 
+function invalidFormat(message, details) {
+  return new AppError('FORMAT_INVALID', message, 500, details);
+}
+
 function requireCustomFormat(message, details) {
   return new AppError('CUSTOM_FORMAT_REQUIRED', message, 400, details);
 }
@@ -21,14 +25,12 @@ function assertValidDimensions(format) {
     format === null
     || typeof format !== 'object'
     || Array.isArray(format)
-    || !Number.isFinite(format.width)
-    || !Number.isFinite(format.height)
     || !Number.isInteger(format.width)
     || !Number.isInteger(format.height)
     || format.width <= 0
     || format.height <= 0
   ) {
-    throw invalidCustomFormat('输出格式尺寸无效');
+    throw invalidFormat('输出格式尺寸无效');
   }
 }
 

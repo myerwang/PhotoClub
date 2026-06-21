@@ -1,7 +1,6 @@
 ---
 style_id: sportstriptych
 name: 运动三联
-thumbnail: sportstriptych.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

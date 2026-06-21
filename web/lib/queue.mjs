@@ -1,5 +1,29 @@
 import { AppError } from './errors.mjs';
 
+export const JOB_RESULT_COMMITTED = Symbol('jobResultCommitted');
+
+export function commitJobResult(result = {}) {
+  if (result === null || typeof result !== 'object') {
+    throw new TypeError('committed job result must be an object');
+  }
+  return Object.defineProperty(result, JOB_RESULT_COMMITTED, {
+    value: true,
+    enumerable: false,
+    configurable: true,
+  });
+}
+
+function isCommittedJobResult(result) {
+  return Boolean(result && typeof result === 'object' && result[JOB_RESULT_COMMITTED] === true);
+}
+
+function stripCommittedJobResultMarker(result) {
+  if (!isCommittedJobResult(result)) {
+    return result ?? {};
+  }
+  return Array.isArray(result) ? [...result] : { ...result };
+}
+
 export class SerialJobQueue {
   constructor({ runJob }) {
     this.runJob = runJob;
@@ -16,6 +40,10 @@ export class SerialJobQueue {
     const stored = {
       id: job.id,
       type: job.type,
+      batchId: job.batchId,
+      styleId: job.styleId,
+      batchIndex: job.batchIndex,
+      batchSize: job.batchSize,
       payload: job.payload,
       status: 'queued',
       createdAt: new Date().toISOString(),
@@ -46,6 +74,18 @@ export class SerialJobQueue {
     let count = 0;
     for (const job of this.jobs) {
       if (job.status === 'queued' && this.cancel(job.id)) count += 1;
+    }
+    return count;
+  }
+
+  cancelBatch(batchId) {
+    if (!batchId) return 0;
+    const jobIds = this.jobs
+      .filter((job) => job.batchId === batchId && ['queued', 'running'].includes(job.status))
+      .map((job) => job.id);
+    let count = 0;
+    for (const jobId of jobIds) {
+      if (this.cancel(jobId)) count += 1;
     }
     return count;
   }
@@ -89,11 +129,12 @@ export class SerialJobQueue {
     this.#emit(job);
     try {
       const result = await this.runJob({ ...this.#publicJob(job), payload: job.payload }, job.controller.signal);
-      if (job.cancelRequested) {
+      const committed = isCommittedJobResult(result);
+      if (job.cancelRequested && !committed) {
         job.status = 'cancelled';
       } else {
         job.status = 'succeeded';
-        job.result = result ?? {};
+        job.result = stripCommittedJobResultMarker(result);
       }
     } catch (error) {
       if (job.cancelRequested || job.controller.signal.aborted) {
@@ -103,6 +144,7 @@ export class SerialJobQueue {
         job.error = {
           code: error?.code ?? 'JOB_FAILED',
           message: error?.message ?? '任务执行失败',
+          ...(error?.details !== undefined ? { details: error.details } : {}),
         };
       }
     } finally {
@@ -119,7 +161,27 @@ export class SerialJobQueue {
   }
 
   #publicJob(job) {
-    const { controller, cancelRequested, payload, ...publicJob } = job;
+    const { controller, cancelRequested, payload, result, error, ...publicJob } = job;
+    if (result !== undefined) publicJob.result = this.#clonePublicValue(result, {});
+    if (error !== undefined) publicJob.error = this.#clonePublicValue(error, {
+      code: error?.code ?? 'JOB_FAILED',
+      message: error?.message ?? '任务执行失败',
+    });
     return publicJob;
+  }
+
+  #clonePublicValue(value, fallback) {
+    if (value === null || (typeof value !== 'object' && typeof value !== 'function')) {
+      return value;
+    }
+    if (typeof structuredClone === 'function') {
+      try {
+        return structuredClone(value);
+      } catch {}
+    }
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch {}
+    return fallback;
   }
 }

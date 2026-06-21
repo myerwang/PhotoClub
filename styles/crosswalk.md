@@ -1,7 +1,6 @@
 ---
 style_id: crosswalk
 name: 街头回眸
-thumbnail: crosswalk.png
 source_url: https://evolink.ai/gpt-image-2-prompts
 source_title: GPT Image 2 Prompts
 source_result: 1

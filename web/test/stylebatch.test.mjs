@@ -56,7 +56,7 @@ test('applies one accepted result and writes a sourced formal style', async () =
   assert.deepEqual(result.created, ['rimlight']);
   const markdown = await readFile(path.join(root, 'styles/rimlight.md'), 'utf8');
   assert.match(markdown, /source_url: https:\/\/example\.com\/prompts\?utm_source=google/);
-  assert.match(markdown, /thumbnail: rimlight\.png/);
+  assert.doesNotMatch(markdown, /thumbnail:/);
   assert.match(markdown, /Apply `system\/rules\/style_base\.md`/);
   assert.equal((await nextResult(root)).rank, 2);
 });
@@ -95,7 +95,7 @@ test('settling the same page twice does not increment empty-page progress twice'
   assert.equal(repeated.emptyQualityPages, 1);
 });
 
-test('audit treats missing thumbnails as expected but reports missing source files', async () => {
+test('audit does not require thumbnails but reports invalid style files', async () => {
   const root = await fixture();
   await enqueueResults(root, googleResults.slice(0, 1));
   await applyResult(root, {
@@ -104,7 +104,7 @@ test('audit treats missing thumbnails as expected but reports missing source fil
   });
   const first = await auditBatch(root);
   assert.deepEqual(first.errors, []);
-  assert.match(first.warnings[0], /thumbnail missing/i);
+  assert.deepEqual(first.warnings, []);
   await writeFile(path.join(root, 'styles/softbox.md'), 'broken');
   const second = await auditBatch(root);
   assert.match(second.errors[0], /invalid style metadata/i);

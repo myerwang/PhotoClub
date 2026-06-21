@@ -1,7 +1,6 @@
 ---
 style_id: y2kgold
 name: 千禧金色
-thumbnail: y2kgold.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

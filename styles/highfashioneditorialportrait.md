@@ -1,7 +1,6 @@
 ---
 style_id: highfashioneditorialportrait
 name: High-Fashion Editorial Portrait Prompt
-thumbnail: highfashioneditorialportrait.png
 source_url: https://github.com/gpt-image2/awesome-gptimage2-prompts
 source_title: gpt-image2/awesome-gptimage2-prompts
 source_result: 34

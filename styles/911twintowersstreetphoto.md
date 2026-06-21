@@ -1,7 +1,6 @@
 ---
 style_id: 911twintowersstreetphoto
 name: 9/11 Twin Towers Street Photo
-thumbnail: 911twintowersstreetphoto.png
 source_url: https://github.com/gpt-image2/awesome-gptimage2-prompts
 source_title: gpt-image2/awesome-gptimage2-prompts
 source_result: 34

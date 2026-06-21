@@ -1,7 +1,6 @@
 ---
 style_id: lavender
 name: 薰衣草晨曦
-thumbnail: lavender.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

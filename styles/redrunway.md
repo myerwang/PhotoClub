@@ -1,7 +1,6 @@
 ---
 style_id: redrunway
 name: 红色跑道
-thumbnail: redrunway.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

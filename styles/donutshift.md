@@ -1,7 +1,6 @@
 ---
 style_id: donutshift
 name: 甜甜圈晨班
-thumbnail: donutshift.png
 source_url: https://morphic.com/resources/how-to/chatgpt-images-2.0-prompts
 source_title: ChatGPT Images 2.0 prompt library: examples for every style
 source_result: 24

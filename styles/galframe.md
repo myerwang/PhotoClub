@@ -1,7 +1,6 @@
 ---
 style_id: galframe
 name: 游戏实拍
-thumbnail: galframe.png
 source_url: https://evolink.ai/gpt-image-2-prompts
 source_title: GPT Image 2 Prompts
 source_result: 1

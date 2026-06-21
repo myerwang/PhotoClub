@@ -5,6 +5,7 @@
   "scripts": {
     "test": "node --test web/test/*.test.mjs",
     "start": "node web/server.mjs",
-    "stylebatch": "node system/tools/stylebatch.mjs"
+    "stylebatch": "node system/tools/stylebatch.mjs",
+    "stylepreview": "node system/tools/syncstylepreview.mjs"
   }
 }

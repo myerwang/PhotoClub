@@ -1,18 +1,39 @@
 import { LANGUAGE_LOCALES, normalizeLanguage, translate } from './i18n.mjs';
+import { setStyleChecked, toggleAllVisible, visibleStyles } from './style-selection.mjs';
+
+const CUSTOM_FORMAT_ID = 'custom';
+const CUSTOM_FORMAT_LIMITS = { min: 256, max: 8192, maxArea: 40_000_000 };
 
 function savedLanguage() {
   try { return localStorage.getItem('photoclub.language'); } catch { return null; }
 }
 
 const state = {
-  lease: 'connecting', busy: false, catalog: null,
-  selection: { profileIds: [], styleId: '', formatId: '', orientation: 'portrait', prompt: '', quantity: 1 },
-  job: null, resultUrls: [], language: normalizeLanguage(savedLanguage()),
+  lease: 'connecting',
+  busy: false,
+  submitting: false,
+  catalog: null,
+  catalogBust: Date.now(),
+  selection: {
+    profileIds: [],
+    styleIds: [],
+    formatId: '',
+    orientation: 'portrait',
+    prompt: '',
+    quantity: 1,
+    onlyUngenerated: false,
+  },
+  styleSelectionTouched: false,
+  job: null,
+  batch: null,
+  resultUrls: [],
+  language: normalizeLanguage(savedLanguage()),
 };
 
 const clientId = crypto.randomUUID();
 let token = '';
 let heartbeatTimer;
+
 const $ = (id) => document.getElementById(id);
 const t = (key, variables = {}, fallback = '') => translate(state.language, key, variables, fallback);
 
@@ -28,15 +49,30 @@ function showError(error, suggestionKey = 'suggestion.default') {
   node.hidden = false;
 }
 
-function clearError() { $('error').hidden = true; $('error').textContent = ''; }
+function clearError() {
+  $('error').hidden = true;
+  $('error').textContent = '';
+}
 
 async function api(path, options = {}) {
   const headers = { ...(options.body ? { 'content-type': 'application/json' } : {}), ...(options.headers || {}) };
-  if (token) { headers['x-client-id'] = clientId; headers['x-lease-token'] = token; }
+  if (token) {
+    headers['x-client-id'] = clientId;
+    headers['x-lease-token'] = token;
+  }
   const response = await fetch(path, { ...options, headers });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw body;
   return body;
+}
+
+function isTerminalStatus(status) {
+  return ['succeeded', 'failed', 'cancelled'].includes(status);
+}
+
+function withBust(url) {
+  if (!url) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}v=${state.catalogBust}`;
 }
 
 function setLease(status) {
@@ -54,9 +90,10 @@ function renderLock() {
     if (['language', 'shutdown', 'cancel', 'help-open', 'help-close', 'loading-cancel'].includes(element.id)) continue;
     element.disabled = locked;
   }
-  $('cancel').disabled = !state.busy;
+  const cancellationUnavailable = !state.busy || state.submitting || state.batch?.cancelRequested;
+  $('cancel').disabled = cancellationUnavailable;
   $('cancel').hidden = !state.busy;
-  $('loading-cancel').disabled = !state.busy;
+  $('loading-cancel').disabled = cancellationUnavailable;
   $('shutdown').disabled = state.lease !== 'owned';
 }
 
@@ -69,111 +106,396 @@ function trashIcon() {
   return icon;
 }
 
-function choice(kind, item, checked, mediaClass, imageUrl, label) {
+function empty(text) {
+  const node = document.createElement('div');
+  node.className = 'empty';
+  node.textContent = text;
+  return node;
+}
+
+function styleLabel(item) {
+  return t(`style.${item.id}`, {}, item.name);
+}
+
+function createProfileChoice(item) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'choice-wrap';
+
   const element = document.createElement('label');
   element.className = 'choice';
+
   const input = document.createElement('input');
-  input.type = kind === 'profile' ? 'checkbox' : 'radio'; input.name = kind; input.value = item.id; input.checked = checked;
+  input.type = 'checkbox';
+  input.name = 'profile';
+  input.value = item.id;
+  input.checked = state.selection.profileIds.includes(item.id);
   input.addEventListener('change', () => {
     clearError();
-    if (kind === 'profile') {
-      state.selection.profileIds = input.checked
-        ? [...new Set([...state.selection.profileIds, item.id])]
-        : state.selection.profileIds.filter((profileId) => profileId !== item.id);
-    } else {
-      state.selection[`${kind}Id`] = item.id;
-    }
+    state.selection.profileIds = input.checked
+      ? [...new Set([...state.selection.profileIds, item.id])]
+      : state.selection.profileIds.filter((profileId) => profileId !== item.id);
     renderSummary();
   });
-  const media = document.createElement('span'); media.className = mediaClass;
-  const image = document.createElement('img'); image.src = `${imageUrl}?v=${Date.now()}`; image.alt = label;
+
+  const media = document.createElement('span');
+  media.className = 'profile-media';
+  const image = document.createElement('img');
+  image.src = withBust(item.imageUrl);
+  image.alt = item.id;
   media.append(image);
-  const name = document.createElement('span'); name.className = 'choice-name'; name.textContent = label;
-  if (kind !== 'profile') { element.append(input, media, name); return element; }
   element.append(input, media);
-  const wrapper = document.createElement('div'); wrapper.className = 'choice-wrap';
-  const footer = document.createElement('div'); footer.className = 'choice-footer';
+
+  const name = document.createElement('span');
+  name.className = 'choice-name';
+  name.textContent = item.id;
+
+  const footer = document.createElement('div');
+  footer.className = 'choice-footer';
   const remove = document.createElement('button');
-  remove.type = 'button'; remove.className = 'profile-delete'; remove.append(trashIcon());
-  remove.title = t('aria.deleteProfile', { name: item.id }); remove.setAttribute('aria-label', remove.title);
-  remove.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); deleteProfile(item.id); });
+  remove.type = 'button';
+  remove.className = 'profile-delete';
+  remove.append(trashIcon());
+  remove.title = t('aria.deleteProfile', { name: item.id });
+  remove.setAttribute('aria-label', remove.title);
+  remove.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    deleteProfile(item.id);
+  });
   footer.append(name, remove);
+
   wrapper.append(element, footer);
   return wrapper;
 }
 
-function renderCatalog() {
-  const { profiles, styles, formats, inputs, issues } = state.catalog;
-  state.selection.profileIds = state.selection.profileIds.filter((profileId) => profiles.some((item) => item.id === profileId));
-  if (!state.selection.profileIds.length && profiles.length) state.selection.profileIds = [profiles[0].id];
-  if (!styles.some((item) => item.id === state.selection.styleId)) state.selection.styleId = styles[0]?.id || '';
-  if (!formats.some((item) => item.id === state.selection.formatId)) state.selection.formatId = formats[0]?.id || '';
-  $('profile-count').textContent = t(profiles.length === 1 ? 'count.peopleOne' : 'count.people', { count: profiles.length });
-  $('style-count').textContent = t(styles.length === 1 ? 'count.stylesOne' : 'count.styles', { count: styles.length });
-  $('profiles').replaceChildren(...(profiles.length ? profiles.map((item) => choice('profile', item, state.selection.profileIds.includes(item.id), 'profile-media', item.imageUrl, item.id)) : [empty(t('empty.profiles'))]));
-  $('styles').replaceChildren(...(styles.length ? styles.map((item) => choice('style', item, item.id === state.selection.styleId, 'style-media', item.thumbnailUrl, styleLabel(item))) : [empty(t('empty.styles'))]));
-  $('formats').replaceChildren(...formats.map((item) => {
-    const label = document.createElement('label'); label.className = 'segment';
-    const input = document.createElement('input'); input.type = 'radio'; input.name = 'format'; input.value = item.id; input.checked = item.id === state.selection.formatId;
-    input.addEventListener('change', () => { clearError(); state.selection.formatId = item.id; renderSummary(); });
-    const displayName = item.id === 'jp_711_photo_l_1051x1500'
-      ? '7-Eleven L'
-      : item.id === 'jp_711_photo_2l_1500x2102' ? '7-Eleven 2L' : item.label;
-    const span = document.createElement('span'); span.textContent = `${displayName} ${item.width}×${item.height}`;
-    label.append(input, span); return label;
+function createStyleChoice(item) {
+  const element = document.createElement('label');
+  element.className = 'choice';
+
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.name = 'style';
+  input.value = item.id;
+  input.checked = state.selection.styleIds.includes(item.id);
+  input.addEventListener('change', () => {
+    clearError();
+    state.styleSelectionTouched = true;
+    state.selection.styleIds = setStyleChecked(state.selection.styleIds, item.id, input.checked);
+    renderStyleControls();
+    renderSummary();
+  });
+
+  const media = document.createElement('span');
+  media.className = 'style-media';
+  if (item.previewUrl) {
+    const image = document.createElement('img');
+    image.src = withBust(item.previewUrl);
+    image.alt = styleLabel(item);
+    media.append(image);
+  } else {
+    const placeholder = document.createElement('span');
+    placeholder.className = 'style-placeholder';
+    placeholder.textContent = t('style.neverGenerated');
+    media.append(placeholder);
+  }
+
+  const name = document.createElement('span');
+  name.className = 'choice-name';
+  name.textContent = styleLabel(item);
+
+  element.append(input, media, name);
+  return element;
+}
+
+function visibleStyleItems() {
+  return visibleStyles(state.catalog?.styles ?? [], state.selection.onlyUngenerated);
+}
+
+function allVisibleStylesSelected() {
+  const visible = visibleStyleItems();
+  return visible.length > 0 && visible.every((style) => state.selection.styleIds.includes(style.id));
+}
+
+function renderStyleControls() {
+  const button = $('style-select-all');
+  const allSelected = allVisibleStylesSelected();
+  button.textContent = t(allSelected ? 'button.clearVisibleStyles' : 'button.selectAllStyles');
+  button.setAttribute('aria-pressed', String(allSelected));
+  button.disabled = visibleStyleItems().length === 0;
+  $('style-only-new').setAttribute('aria-pressed', String(state.selection.onlyUngenerated));
+}
+
+function renderStyles() {
+  const styles = visibleStyleItems();
+  $('styles').replaceChildren(...(styles.length ? styles.map((item) => createStyleChoice(item)) : [empty(t('empty.styles'))]));
+  renderStyleControls();
+}
+
+function renderFormats() {
+  const options = [...(state.catalog?.formats ?? []), { id: CUSTOM_FORMAT_ID, label: t('format.custom') }];
+  $('formats').replaceChildren(...options.map((item) => {
+    const label = document.createElement('label');
+    label.className = 'segment';
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'format';
+    input.value = item.id;
+    input.checked = item.id === state.selection.formatId;
+    input.addEventListener('change', () => {
+      clearError();
+      state.selection.formatId = item.id;
+      renderCustomFormatVisibility();
+      renderSummary();
+    });
+    const span = document.createElement('span');
+    const displayName = item.id === CUSTOM_FORMAT_ID ? item.label : t(`format.${item.id}`, {}, item.label);
+    span.textContent = item.id === CUSTOM_FORMAT_ID ? displayName : `${displayName} ${item.width}×${item.height}`;
+    label.append(input, span);
+    return label;
   }));
-  $('input-id').replaceChildren(...inputs.map((item) => new Option(item.id, item.id)));
-  if (issues.length) showError({ error: issues[0] }, 'suggestion.style');
-  renderSummary(); renderLock();
+  renderCustomFormatVisibility();
 }
 
-function empty(text) { const node = document.createElement('div'); node.className = 'empty'; node.textContent = text; return node; }
-
-function styleLabel(item) { return t(`style.${item.id}`, {}, item.name); }
-
-function renderSummary() {
-  const selectedStyle = state.catalog?.styles.find((item) => item.id === state.selection.styleId);
-  const style = selectedStyle ? styleLabel(selectedStyle) : t('summary.noStyle');
-  const people = state.selection.profileIds.length ? state.selection.profileIds.join(' + ') : t('summary.noPeople');
-  const orientation = t(state.selection.orientation === 'landscape' ? 'field.landscape' : 'field.portrait');
-  $('selection-summary').textContent = `${people} / ${style} / ${orientation}`;
+function renderCustomFormatVisibility() {
+  $('custom-format-block').hidden = state.selection.formatId !== CUSTOM_FORMAT_ID;
 }
 
-async function refreshCatalog() { state.catalog = await api('/api/catalog'); renderCatalog(); }
+function renderResults() {
+  $('result').replaceChildren(...state.resultUrls.map((resultUrl, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'result-preview';
+    button.setAttribute('aria-label', t('aria.viewResult', { index: index + 1 }));
+    const image = new Image();
+    image.src = resultUrl;
+    image.alt = t('result.alt', { index: index + 1 });
+    button.append(image);
+    button.addEventListener('click', () => {
+      $('result-dialog-image').src = resultUrl;
+      $('result-dialog-image').alt = t('result.previewAlt', { index: index + 1 });
+      $('result-dialog').showModal();
+    });
+    return button;
+  }));
+}
 
-function handleJob(job) {
-  if (state.job && job.id !== state.job.id) return;
-  state.job = job;
+function batchStatusMessage() {
+  const batch = state.batch;
+  if (!batch) return;
+
+  const total = batch.jobIds.length;
+  const terminalCount = batch.terminalIds.length;
+  const statuses = batch.jobIds.map((id) => batch.statuses[id]).filter(Boolean);
+  const allTerminal = total > 0 && terminalCount === total;
+
+  $('loading-title').textContent = t('loading.generate');
+
+  if (allTerminal) {
+    state.busy = false;
+    $('loading-overlay').hidden = true;
+    if (statuses.every((status) => status === 'cancelled')) {
+      $('task-state').textContent = `${t('task.generate')}: ${t('status.cancelled')}`;
+    } else if (statuses.some((status) => status === 'failed' || status === 'cancelled')) {
+      $('task-state').textContent = `${t('task.generate')}: ${t('task.batchPartialFailure')}`;
+    } else {
+      clearError();
+      $('task-state').textContent = `${t('task.generate')}: ${t('task.batchComplete')}`;
+    }
+    renderLock();
+    return;
+  }
+
+  const job = batch.lastJob ?? { status: 'queued', batchIndex: 0, batchSize: total };
+  const progress = isTerminalStatus(job.status)
+    ? t('loading.batchProgress', { current: terminalCount, total })
+    : t('loading.batchProgress', { current: (job.batchIndex ?? 0) + 1, total: job.batchSize ?? total });
+  const statusKey = isTerminalStatus(job.status)
+    ? `status.${job.status}`
+    : job.status === 'running' ? 'loading.running' : 'loading.queued';
+  const label = t(statusKey, {}, job.status);
+
+  state.busy = true;
+  $('loading-overlay').hidden = false;
+  $('loading-status-text').textContent = `${label} ${progress}`.trim();
+  $('task-state').textContent = `${t('task.generate')}: ${t(`status.${job.status}`, {}, job.status)} (${progress})`;
+  renderLock();
+}
+
+function renderJobStatus() {
+  const job = state.job;
+  if (!job) return;
   $('task-state').textContent = `${t(job.type === 'profile' ? 'task.profile' : 'task.generate')}: ${t(`status.${job.status}`, {}, job.status)}`;
   state.busy = ['queued', 'running'].includes(job.status);
   $('loading-overlay').hidden = !state.busy;
   $('loading-title').textContent = t(job.type === 'profile' ? 'loading.profile' : 'loading.generate');
   $('loading-status-text').textContent = t(job.status === 'queued' ? 'loading.queued' : 'loading.running');
+  renderLock();
+}
+
+function renderSummary() {
+  const styleLookup = new Map((state.catalog?.styles ?? []).map((item) => [item.id, item]));
+  const styleNames = state.selection.styleIds
+    .map((styleId) => styleLookup.get(styleId))
+    .filter(Boolean)
+    .map((item) => styleLabel(item));
+  const styleSummary = styleNames.length
+    ? `${t('summary.styleCount', { count: styleNames.length })} / ${t('summary.styleOrder', { order: styleNames.join(' -> ') })}`
+    : t('summary.noStyle');
+  const people = state.selection.profileIds.length ? state.selection.profileIds.join(' + ') : t('summary.noPeople');
+  const orientation = t(state.selection.orientation === 'landscape' ? 'field.landscape' : 'field.portrait');
+  $('selection-summary').textContent = `${people} / ${styleSummary} / ${orientation}`;
+}
+
+function createBatchState(batchId, jobs) {
+  return {
+    id: batchId,
+    jobIds: jobs.map((job) => job.id),
+    terminalIds: [],
+    resultUrls: [],
+    failedStyleIds: [],
+    cancelRequested: false,
+    statuses: Object.fromEntries(jobs.map((job) => [job.id, job.status])),
+    lastJob: jobs[0] ?? null,
+  };
+}
+
+function appendBatchResults(outputUrls) {
+  if (!Array.isArray(outputUrls) || !outputUrls.length) return;
+  const busted = outputUrls.map((outputUrl) => withBust(outputUrl));
+  state.batch.resultUrls.push(...busted);
+  state.resultUrls = [...state.batch.resultUrls];
+  renderResults();
+}
+
+async function refreshCatalog() {
+  state.catalog = await api('/api/catalog');
+  state.catalogBust = Date.now();
+  renderCatalog();
+}
+
+function handleProfileJob(job) {
+  if (state.job && job.id !== state.job.id) return;
+  state.job = job;
+  renderJobStatus();
   if (job.status === 'succeeded') {
     clearError();
     const outputUrls = job.result?.outputUrls ?? (job.result?.outputUrl ? [job.result.outputUrl] : []);
     if (outputUrls.length) {
-      state.resultUrls = outputUrls.map((outputUrl) => `${outputUrl}?v=${Date.now()}`);
-      $('result').replaceChildren(...state.resultUrls.map((resultUrl, index) => {
-        const button = document.createElement('button'); button.type = 'button'; button.className = 'result-preview';
-        button.setAttribute('aria-label', t('aria.viewResult', { index: index + 1 }));
-        const image = new Image(); image.src = resultUrl; image.alt = t('result.alt', { index: index + 1 });
-        button.append(image);
-        button.addEventListener('click', () => {
-          $('result-dialog-image').src = resultUrl;
-          $('result-dialog-image').alt = t('result.previewAlt', { index: index + 1 });
-          $('result-dialog').showModal();
-        });
-        return button;
-      }));
+      state.resultUrls = outputUrls.map((outputUrl) => withBust(outputUrl));
+      renderResults();
     }
     refreshCatalog().catch(showError);
-  } else if (job.status === 'failed') showError(job.error, 'suggestion.job');
+  } else if (job.status === 'failed') {
+    showError(job.error, 'suggestion.job');
+  }
+}
+
+function handleBatchJob(job) {
+  if (!state.batch || job.batchId !== state.batch.id || !state.batch.jobIds.includes(job.id)) return;
+
+  state.batch.statuses[job.id] = job.status;
+  state.batch.lastJob = job;
+
+  if (isTerminalStatus(job.status)) {
+    if (state.batch.terminalIds.includes(job.id)) return;
+    state.batch.terminalIds.push(job.id);
+    if (job.status === 'succeeded') {
+      appendBatchResults(job.result?.outputUrls ?? (job.result?.outputUrl ? [job.result.outputUrl] : []));
+      refreshCatalog().catch(showError);
+    } else if (job.status === 'failed') {
+      if (job.styleId && !state.batch.failedStyleIds.includes(job.styleId)) {
+        state.batch.failedStyleIds.push(job.styleId);
+      }
+      showError(job.error, 'suggestion.job');
+    }
+  }
+
+  batchStatusMessage();
+}
+
+async function reconcileBatchJobs() {
+  if (!state.batch) return;
+  const snapshot = await api('/api/jobs');
+  for (const job of snapshot.jobs ?? []) handleBatchJob(job);
+}
+
+function handleEventJob(job) {
+  if (job.type === 'profile') {
+    handleProfileJob(job);
+    return;
+  }
+  if (job.batchId) handleBatchJob(job);
+}
+
+function renderCatalog() {
+  const { profiles, styles, formats, inputs, issues } = state.catalog;
+
+  state.selection.profileIds = state.selection.profileIds.filter((profileId) => profiles.some((item) => item.id === profileId));
+  if (!state.selection.profileIds.length && profiles.length) state.selection.profileIds = [profiles[0].id];
+
+  state.selection.styleIds = state.selection.styleIds.filter((styleId) => styles.some((item) => item.id === styleId));
+  if (!state.selection.styleIds.length && styles.length && !state.styleSelectionTouched) state.selection.styleIds = [styles[0].id];
+
+  if (state.selection.formatId !== CUSTOM_FORMAT_ID && !formats.some((item) => item.id === state.selection.formatId)) {
+    state.selection.formatId = formats[0]?.id || '';
+  }
+  if (!state.selection.formatId) state.selection.formatId = formats[0]?.id || CUSTOM_FORMAT_ID;
+
+  $('profile-count').textContent = t(profiles.length === 1 ? 'count.peopleOne' : 'count.people', { count: profiles.length });
+  $('style-count').textContent = t(styles.length === 1 ? 'count.stylesOne' : 'count.styles', { count: styles.length });
+  $('profiles').replaceChildren(...(profiles.length ? profiles.map((item) => createProfileChoice(item)) : [empty(t('empty.profiles'))]));
+  renderStyles();
+  renderFormats();
+  $('input-id').replaceChildren(...inputs.map((item) => new Option(item.id, item.id)));
+
+  if (issues.length) showError({ error: issues[0] }, 'suggestion.style');
+  renderSummary();
   renderLock();
 }
 
+function readCustomFormat() {
+  const shortRaw = $('custom-short-edge').value.trim();
+  const longRaw = $('custom-long-edge').value.trim();
+  if (!shortRaw || !longRaw) return { code: 'CUSTOM_FORMAT_REQUIRED' };
+
+  const shortEdge = Number(shortRaw);
+  const longEdge = Number(longRaw);
+  if (
+    !Number.isInteger(shortEdge)
+    || !Number.isInteger(longEdge)
+    || shortEdge < CUSTOM_FORMAT_LIMITS.min
+    || shortEdge > CUSTOM_FORMAT_LIMITS.max
+    || longEdge < CUSTOM_FORMAT_LIMITS.min
+    || longEdge > CUSTOM_FORMAT_LIMITS.max
+    || shortEdge > longEdge
+    || shortEdge * longEdge > CUSTOM_FORMAT_LIMITS.maxArea
+  ) {
+    return { code: 'CUSTOM_FORMAT_INVALID' };
+  }
+
+  return { value: { shortEdge, longEdge } };
+}
+
 async function cancelCurrentJob() {
-  if (state.job) await api(`/api/jobs/${state.job.id}`, { method: 'DELETE' }).catch(showError);
+  if (state.submitting || state.batch?.cancelRequested) return;
+  try {
+    if (state.batch?.id && state.busy) {
+      state.batch.cancelRequested = true;
+      renderLock();
+      await api(`/api/batches/${encodeURIComponent(state.batch.id)}`, { method: 'DELETE' });
+      await reconcileBatchJobs();
+      return;
+    }
+    if (state.job) await api(`/api/jobs/${state.job.id}`, { method: 'DELETE' });
+  } catch (error) {
+    if (state.batch) {
+      state.batch.cancelRequested = false;
+      await reconcileBatchJobs().catch(() => {});
+      if (!state.busy) return;
+    }
+    showError(error);
+    renderLock();
+  }
 }
 
 async function shutdownService() {
@@ -183,25 +505,66 @@ async function shutdownService() {
     await api('/api/shutdown', { method: 'POST', body: '{}' });
     token = '';
     setLease('offline');
-  } catch (error) { showError(error); }
+  } catch (error) {
+    showError(error);
+  }
 }
 
 async function submitGenerate() {
   clearError();
   const quantity = Number($('quantity').value);
-  if (!state.selection.profileIds.length || !state.selection.styleId || !state.selection.formatId) return showError({ code: 'SELECTION_REQUIRED' });
+  if (!state.selection.profileIds.length || !state.selection.formatId) return showError({ code: 'SELECTION_REQUIRED' });
+  if (!state.selection.styleIds.length) return showError({ code: 'STYLES_INVALID' });
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 20) return showError({ code: 'QUANTITY_INVALID' });
+
+  const payload = {
+    profileIds: state.selection.profileIds,
+    styleIds: state.selection.styleIds,
+    formatId: state.selection.formatId,
+    orientation: state.selection.orientation,
+    extraPrompt: $('prompt').value,
+    quantity,
+  };
+  if (payload.formatId === CUSTOM_FORMAT_ID) {
+    const customFormat = readCustomFormat();
+    if (customFormat.code) return showError({ code: customFormat.code });
+    payload.customFormat = customFormat.value;
+  }
+
   try {
     state.selection.quantity = quantity;
-    state.job = await api('/api/jobs/generate', { method: 'POST', body: JSON.stringify({ ...state.selection, extraPrompt: $('prompt').value, quantity }) });
-    state.busy = true; handleJob(state.job);
-  } catch (error) { showError(error); }
+    state.job = null;
+    state.batch = null;
+    state.resultUrls = [];
+    renderResults();
+    state.submitting = true;
+    state.busy = true;
+    $('loading-overlay').hidden = false;
+    $('loading-title').textContent = t('loading.generate');
+    $('loading-status-text').textContent = t('loading.preparing');
+    $('task-state').textContent = `${t('task.generate')}: ${t('loading.preparing')}`;
+    renderLock();
+    const { batchId, jobs } = await api('/api/jobs/generate', { method: 'POST', body: JSON.stringify(payload) });
+    state.submitting = false;
+    state.batch = createBatchState(batchId, jobs);
+    batchStatusMessage();
+    await reconcileBatchJobs();
+  } catch (error) {
+    state.submitting = false;
+    if (!state.batch) {
+      state.busy = false;
+      $('loading-overlay').hidden = true;
+      renderLock();
+    }
+    showError(error);
+  }
 }
 
 async function submitProfile() {
   clearError();
   const method = document.querySelector('input[name="profile-method"]:checked')?.value || 'photos';
   try {
+    state.batch = null;
     if (method === 'prompt') {
       const description = $('profile-prompt').value.trim();
       if (!description) return showError({ code: 'PROFILE_PROMPT_REQUIRED' });
@@ -212,8 +575,11 @@ async function submitProfile() {
     } else {
       state.job = await api('/api/jobs/profile', { method: 'POST', body: JSON.stringify({ inputId: $('input-id').value }) });
     }
-    $('profile-dialog').close(); state.busy = true; handleJob(state.job);
-  } catch (error) { showError(error, method === 'photos' ? 'suggestion.photos' : 'suggestion.prompt'); }
+    $('profile-dialog').close();
+    handleProfileJob(state.job);
+  } catch (error) {
+    showError(error, method === 'photos' ? 'suggestion.photos' : 'suggestion.prompt');
+  }
 }
 
 async function deleteProfile(profileId) {
@@ -223,7 +589,9 @@ async function deleteProfile(profileId) {
     await api(`/api/profiles/${encodeURIComponent(profileId)}`, { method: 'DELETE' });
     state.selection.profileIds = state.selection.profileIds.filter((id) => id !== profileId);
     await refreshCatalog();
-  } catch (error) { showError(error, 'suggestion.refresh'); }
+  } catch (error) {
+    showError(error, 'suggestion.refresh');
+  }
 }
 
 function applyLanguage(language) {
@@ -238,16 +606,9 @@ function applyLanguage(language) {
   $('language').value = state.language;
   setLease(state.lease);
   if (state.catalog) renderCatalog();
-  if (state.job) {
-    $('task-state').textContent = `${t(state.job.type === 'profile' ? 'task.profile' : 'task.generate')}: ${t(`status.${state.job.status}`, {}, state.job.status)}`;
-    $('loading-title').textContent = t(state.job.type === 'profile' ? 'loading.profile' : 'loading.generate');
-    $('loading-status-text').textContent = t(state.job.status === 'queued' ? 'loading.queued' : 'loading.running');
-  }
-  for (const [index, button] of [...document.querySelectorAll('.result-preview')].entries()) {
-    button.setAttribute('aria-label', t('aria.viewResult', { index: index + 1 }));
-    const image = button.querySelector('img');
-    if (image) image.alt = t('result.alt', { index: index + 1 });
-  }
+  if (state.batch) batchStatusMessage();
+  else if (state.job) renderJobStatus();
+  renderResults();
 }
 
 function setProfileMethod(method) {
@@ -261,24 +622,49 @@ async function start() {
   try {
     const lease = await api('/api/lease/acquire', { method: 'POST', body: JSON.stringify({ clientId }) });
     if (lease.status !== 'owned') return setLease('occupied');
-    token = lease.token; setLease('owned');
+    token = lease.token;
+    setLease('owned');
     await refreshCatalog();
     const events = new EventSource('/api/events');
-    events.onmessage = (event) => handleJob(JSON.parse(event.data).job);
-    events.onerror = () => { if (state.lease === 'owned') $('connection').textContent = t('connection.retrying'); };
+    events.onopen = () => {
+      if (state.batch) reconcileBatchJobs().catch((error) => showError(error, 'suggestion.job'));
+    };
+    events.onmessage = (event) => handleEventJob(JSON.parse(event.data).job);
+    events.onerror = () => {
+      if (state.lease === 'owned') $('connection').textContent = t('connection.retrying');
+    };
     heartbeatTimer = setInterval(async () => {
       try {
         const result = await api('/api/lease/heartbeat', { method: 'POST', body: JSON.stringify({ clientId, token }) });
         if (result.status !== 'owned') setLease('occupied');
-      } catch { setLease('offline'); }
+      } catch {
+        setLease('offline');
+      }
     }, 5_000);
-  } catch (error) { setLease('offline'); showError(error, 'suggestion.restart'); }
+  } catch (error) {
+    setLease('offline');
+    showError(error, 'suggestion.restart');
+  }
 }
 
 $('language').addEventListener('change', (event) => applyLanguage(event.target.value));
 $('shutdown').addEventListener('click', shutdownService);
 $('generate').addEventListener('click', submitGenerate);
 $('quantity').addEventListener('input', clearError);
+$('custom-short-edge').addEventListener('input', clearError);
+$('custom-long-edge').addEventListener('input', clearError);
+$('style-select-all').addEventListener('click', () => {
+  clearError();
+  state.styleSelectionTouched = true;
+  state.selection.styleIds = toggleAllVisible(state.selection.styleIds, visibleStyleItems().map((item) => item.id));
+  renderStyles();
+  renderSummary();
+});
+$('style-only-new').addEventListener('click', () => {
+  clearError();
+  state.selection.onlyUngenerated = !state.selection.onlyUngenerated;
+  renderStyles();
+});
 $('orientations').addEventListener('change', (event) => {
   if (event.target.name === 'orientation') {
     state.selection.orientation = event.target.value;
@@ -298,12 +684,19 @@ $('profile-form').addEventListener('submit', (event) => event.preventDefault());
 $('cancel').addEventListener('click', cancelCurrentJob);
 $('loading-cancel').addEventListener('click', cancelCurrentJob);
 $('result-dialog-close').addEventListener('click', () => $('result-dialog').close());
-$('result-dialog').addEventListener('click', (event) => { if (event.target === $('result-dialog')) $('result-dialog').close(); });
+$('result-dialog').addEventListener('click', (event) => {
+  if (event.target === $('result-dialog')) $('result-dialog').close();
+});
 $('open-output').addEventListener('click', () => api('/api/open-output', { method: 'POST', body: '{}' }).catch(showError));
 $('open-input').addEventListener('click', () => api('/api/open-input', { method: 'POST', body: '{}' }).catch(showError));
 $('lan-mode').addEventListener('change', async (event) => {
-  try { await api('/api/network', { method: 'POST', body: JSON.stringify({ lan: event.target.checked }) }); $('connection').textContent = t('connection.switching'); }
-  catch (error) { event.target.checked = !event.target.checked; showError(error); }
+  try {
+    await api('/api/network', { method: 'POST', body: JSON.stringify({ lan: event.target.checked }) });
+    $('connection').textContent = t('connection.switching');
+  } catch (error) {
+    event.target.checked = !event.target.checked;
+    showError(error);
+  }
 });
 window.addEventListener('pagehide', () => {
   clearInterval(heartbeatTimer);

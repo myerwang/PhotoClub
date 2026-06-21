@@ -1,7 +1,6 @@
 ---
 style_id: tropicalbeachsandcastleportr
 name: Tropical Beach Sandcastle Portrait
-thumbnail: tropicalbeachsandcastleportr.png
 source_url: https://github.com/gpt-image2/awesome-gptimage2-prompts
 source_title: gpt-image2/awesome-gptimage2-prompts
 source_result: 34

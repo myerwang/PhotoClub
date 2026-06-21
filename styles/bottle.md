@@ -1,7 +1,6 @@
 ---
 style_id: bottle
 name: 街头炫瓶
-thumbnail: bottle.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

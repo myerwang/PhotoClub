@@ -1,7 +1,6 @@
 ---
 style_id: paddock
 name: 围场直播
-thumbnail: paddock.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

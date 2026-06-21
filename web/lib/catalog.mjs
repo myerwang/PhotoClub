@@ -1,7 +1,9 @@
-import { access, readFile, readdir } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { access, readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 import { AppError, asAppError } from './errors.mjs';
+import { readStyleHistory } from './stylepreview.mjs';
 
 const SAFE_ID = /^[A-Za-z0-9\u3040-\u30ff\u3400-\u9fff]+$/u;
 
@@ -28,16 +30,12 @@ export function parseStyleFrontmatter(markdown, fileName = 'style.md') {
 
   const id = fields.style_id;
   const name = fields.name;
-  const thumbnail = fields.thumbnail;
-  if (!id || !name || !thumbnail) {
-    throw new AppError('STYLE_METADATA_INVALID', '风格元数据必须包含 style_id、name 和 thumbnail', 422, { fileName });
+  if (!id || !name) {
+    throw new AppError('STYLE_METADATA_INVALID', '风格元数据必须包含 style_id 和 name', 422, { fileName });
   }
   assertSafeId(id, '风格');
-  if (path.basename(thumbnail) !== thumbnail || !/^[A-Za-z0-9.-]+$/.test(thumbnail)) {
-    throw new AppError('STYLE_METADATA_INVALID', '风格缩略图文件名无效', 422, { fileName, styleId: id });
-  }
 
-  return { id, name, thumbnail };
+  return { id, name };
 }
 
 export function parseOutputFormats(markdown) {
@@ -84,6 +82,36 @@ function issueFrom(error) {
   };
 }
 
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function validateStyleHistory(rootDir, history) {
+  const filePath = path.join(rootDir, '.control', 'style-history.json');
+  if (history === null || typeof history !== 'object' || Array.isArray(history)) {
+    throw new AppError('STYLE_HISTORY_INVALID', '风格历史无效', 422, { filePath });
+  }
+
+  for (const [styleId, record] of Object.entries(history)) {
+    if (record === null || typeof record !== 'object' || Array.isArray(record)) {
+      throw new AppError('STYLE_HISTORY_INVALID', '风格历史无效', 422, { filePath });
+    }
+
+    if (!isNonEmptyString(styleId) ||
+      !isNonEmptyString(record.styleId) ||
+      !isNonEmptyString(record.generatedAt) ||
+      !isNonEmptyString(record.jobId) ||
+      !isNonEmptyString(record.sourcePath) ||
+      !isNonEmptyString(record.preview) ||
+      record.styleId !== styleId ||
+      record.preview !== `styles/previews/${styleId}.jpg`) {
+      throw new AppError('STYLE_HISTORY_INVALID', '风格历史无效', 422, { filePath });
+    }
+  }
+
+  return history;
+}
+
 export async function loadCatalog(rootDir) {
   const profiles = [];
   for (const id of await directDirectories(path.join(rootDir, 'profiles'))) {
@@ -99,6 +127,15 @@ export async function loadCatalog(rootDir) {
   const inputs = (await directDirectories(path.join(rootDir, 'input'))).map((id) => ({ id }));
   const styles = [];
   const issues = [];
+  let history = {};
+
+  try {
+    history = validateStyleHistory(rootDir, await readStyleHistory(rootDir));
+  } catch (error) {
+    issues.push(issueFrom(error));
+    history = {};
+  }
+
   let styleEntries = [];
   try {
     styleEntries = await readdir(path.join(rootDir, 'styles'), { withFileTypes: true });
@@ -110,13 +147,34 @@ export async function loadCatalog(rootDir) {
     try {
       const markdown = await readFile(path.join(rootDir, 'styles', entry.name), 'utf8');
       const style = parseStyleFrontmatter(markdown, entry.name);
-      const thumbnailPath = path.join(rootDir, 'styles', style.thumbnail);
-      try {
-        await access(thumbnailPath);
-      } catch {
-        throw new AppError('STYLE_THUMBNAIL_MISSING', '风格代表图不存在', 422, { styleId: style.id, thumbnail: style.thumbnail });
+      const historyRecord = history[style.id];
+      const generated = historyRecord !== undefined;
+      let previewUrl = null;
+
+      if (generated) {
+        const previewPath = path.join(rootDir, 'styles', 'previews', `${style.id}.jpg`);
+        try {
+          await access(previewPath, constants.R_OK);
+          const previewStat = await stat(previewPath);
+          if (!previewStat.isFile()) {
+            throw new Error('preview is not a file');
+          }
+          previewUrl = `/media/style-previews/${encodeURIComponent(style.id)}.jpg`;
+        } catch {
+          issues.push(issueFrom(new AppError('STYLE_PREVIEW_MISSING', '风格代表图预览不存在', 422, {
+            styleId: style.id,
+            preview: `styles/previews/${style.id}.jpg`,
+          })));
+        }
       }
-      styles.push({ id: style.id, name: style.name, thumbnailUrl: `/media/styles/${encodeURIComponent(style.thumbnail)}` });
+
+      styles.push({
+        id: style.id,
+        name: style.name,
+        generated,
+        generatedAt: generated ? historyRecord.generatedAt ?? null : null,
+        previewUrl,
+      });
     } catch (error) {
       issues.push(issueFrom(error));
     }

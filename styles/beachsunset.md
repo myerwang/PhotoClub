@@ -1,7 +1,6 @@
 ---
 style_id: beachsunset
 name: 海滩落日
-thumbnail: beachsunset.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

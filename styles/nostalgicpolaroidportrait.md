@@ -1,7 +1,6 @@
 ---
 style_id: nostalgicpolaroidportrait
 name: Nostalgic Polaroid Portrait Prompt
-thumbnail: nostalgicpolaroidportrait.png
 source_url: https://github.com/gpt-image2/awesome-gptimage2-prompts
 source_title: gpt-image2/awesome-gptimage2-prompts
 source_result: 34

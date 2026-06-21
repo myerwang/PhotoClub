@@ -1,7 +1,6 @@
 ---
 style_id: couture
 name: 酒店高定
-thumbnail: couture.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

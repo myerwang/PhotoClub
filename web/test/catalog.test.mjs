@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -20,8 +20,7 @@ async function fixture() {
   await mkdir(path.join(root, 'styles'), { recursive: true });
   await mkdir(path.join(root, 'system', 'rules'), { recursive: true });
   await writeFile(path.join(root, 'profiles', 'mama', 'multiview_reference.png'), 'png');
-  await writeFile(path.join(root, 'styles', 'sticker.png'), 'png');
-  await writeFile(path.join(root, 'styles', 'sticker.md'), `---\nstyle_id: sticker\nname: 贴纸\nthumbnail: sticker.png\n---\n# Sticker\n`);
+  await writeFile(path.join(root, 'styles', 'sticker.md'), `---\nstyle_id: 风格1\nname: 贴纸\n---\n# Sticker\n`);
   await writeFile(path.join(root, 'system', 'rules', 'output_formats.md'), `
 ### \`jp_711_photo_l_1051x1500\`
 - Status: active
@@ -49,22 +48,159 @@ test('lists direct input directories for profile generation', async () => {
   assert.deepEqual(catalog.inputs, [{ id: 'baby' }, { id: 'mama' }]);
 });
 
-test('parses style_id name and thumbnail from YAML frontmatter', () => {
+test('ignores legacy thumbnail metadata and returns only the style identity', () => {
   const style = parseStyleFrontmatter(`---\nstyle_id: sticker\nname: 贴纸\nthumbnail: sticker.png\n---\n`, 'sticker.md');
-  assert.deepEqual(style, { id: 'sticker', name: '贴纸', thumbnail: 'sticker.png' });
+  assert.deepEqual(style, { id: 'sticker', name: '贴纸' });
 });
 
-test('rejects a style with missing thumbnail file', async () => {
+test('production styles do not declare legacy pre-generated thumbnails', async () => {
+  const stylesDir = path.resolve('styles');
+  const styleFiles = (await readdir(stylesDir)).filter((fileName) => fileName.endsWith('.md'));
+  assert.ok(styleFiles.length > 0);
+  for (const fileName of styleFiles) {
+    const markdown = await readFile(path.join(stylesDir, fileName), 'utf8');
+    assert.doesNotMatch(markdown, /^thumbnail:/m, fileName);
+  }
+});
+
+test('parses style frontmatter without thumbnail', () => {
+  const style = parseStyleFrontmatter(`---\nstyle_id: sticker\nname: 贴纸\n---\n`, 'sticker.md');
+  assert.deepEqual(style, { id: 'sticker', name: '贴纸' });
+});
+
+test('loadCatalog returns styles without prebuilt thumbnails', async () => {
+  const catalog = await loadCatalog(await fixture());
+  assert.deepEqual(catalog.styles, [{
+    id: '风格1',
+    name: '贴纸',
+    generated: false,
+    generatedAt: null,
+    previewUrl: null,
+  }]);
+  assert.deepEqual(catalog.issues, []);
+});
+
+test('loadCatalog marks history-backed styles as generated and uses readable previews', async () => {
   const root = await fixture();
-  await writeFile(path.join(root, 'styles', 'broken.md'), `---\nstyle_id: broken\nname: 损坏风格\nthumbnail: missing.png\n---\n`);
+  await mkdir(path.join(root, '.control'), { recursive: true });
+  await mkdir(path.join(root, 'styles', 'previews'), { recursive: true });
+  await writeFile(path.join(root, '.control', 'style-history.json'), JSON.stringify({
+    '风格1': {
+      styleId: '风格1',
+      generatedAt: '2026-06-19T12:00:00.000Z',
+      jobId: 'job-1',
+      sourcePath: '/gone/old-output.png',
+      preview: 'styles/previews/风格1.jpg',
+    },
+  }));
+  await writeFile(path.join(root, 'styles', 'previews', '风格1.jpg'), 'preview');
   const catalog = await loadCatalog(root);
   assert.deepEqual(catalog.styles, [{
-    id: 'sticker',
+    id: '风格1',
     name: '贴纸',
-    thumbnailUrl: '/media/styles/sticker.png',
+    generated: true,
+    generatedAt: '2026-06-19T12:00:00.000Z',
+    previewUrl: '/media/style-previews/%E9%A3%8E%E6%A0%BC1.jpg',
   }]);
-  assert.equal(catalog.issues[0].code, 'STYLE_THUMBNAIL_MISSING');
-  assert.equal(catalog.issues[0].details.styleId, 'broken');
+  assert.deepEqual(catalog.issues, []);
+});
+
+test('loadCatalog keeps history-backed styles when the preview is missing', async () => {
+  const root = await fixture();
+  await mkdir(path.join(root, '.control'), { recursive: true });
+  await writeFile(path.join(root, '.control', 'style-history.json'), JSON.stringify({
+    '风格1': {
+      styleId: '风格1',
+      generatedAt: '2026-06-19T12:00:00.000Z',
+      jobId: 'job-1',
+      sourcePath: '/gone/old-output.png',
+      preview: 'styles/previews/风格1.jpg',
+    },
+  }));
+  const catalog = await loadCatalog(root);
+  assert.deepEqual(catalog.styles, [{
+    id: '风格1',
+    name: '贴纸',
+    generated: true,
+    generatedAt: '2026-06-19T12:00:00.000Z',
+    previewUrl: null,
+  }]);
+  assert.equal(catalog.issues.length, 1);
+  assert.equal(catalog.issues[0].code, 'STYLE_PREVIEW_MISSING');
+  assert.equal(catalog.issues[0].details.styleId, '风格1');
+});
+
+test('loadCatalog reports invalid style history without hiding styles', async () => {
+  const root = await fixture();
+  await mkdir(path.join(root, '.control'), { recursive: true });
+  await writeFile(path.join(root, '.control', 'style-history.json'), '{ not json');
+  const catalog = await loadCatalog(root);
+  assert.deepEqual(catalog.styles, [{
+    id: '风格1',
+    name: '贴纸',
+    generated: false,
+    generatedAt: null,
+    previewUrl: null,
+  }]);
+  assert.equal(catalog.issues.length, 1);
+  assert.equal(catalog.issues[0].code, 'STYLE_HISTORY_INVALID');
+});
+
+test('loadCatalog rejects malformed history records and treats all styles as ungenerated', async () => {
+  const root = await fixture();
+  await mkdir(path.join(root, '.control'), { recursive: true });
+  await writeFile(path.join(root, '.control', 'style-history.json'), JSON.stringify({
+    '风格1': null,
+    '坏风格': {
+      styleId: '不一致',
+      generatedAt: '2026-06-19T12:00:00.000Z',
+      jobId: 'job-1',
+      sourcePath: '/gone/old-output.png',
+      preview: 'styles/previews/坏风格.jpg',
+    },
+  }));
+
+  const catalog = await loadCatalog(root);
+  assert.deepEqual(catalog.styles, [{
+    id: '风格1',
+    name: '贴纸',
+    generated: false,
+    generatedAt: null,
+    previewUrl: null,
+  }]);
+  assert.deepEqual(catalog.issues, [{
+    code: 'STYLE_HISTORY_INVALID',
+    message: '风格历史无效',
+    details: {
+      filePath: path.join(root, '.control', 'style-history.json'),
+    },
+  }]);
+});
+
+test('loadCatalog treats a same-named jpg directory as missing preview', async () => {
+  const root = await fixture();
+  await mkdir(path.join(root, '.control'), { recursive: true });
+  await writeFile(path.join(root, '.control', 'style-history.json'), JSON.stringify({
+    '风格1': {
+      styleId: '风格1',
+      generatedAt: '2026-06-19T12:00:00.000Z',
+      jobId: 'job-1',
+      sourcePath: '/gone/old-output.png',
+      preview: 'styles/previews/风格1.jpg',
+    },
+  }));
+  await mkdir(path.join(root, 'styles', 'previews', '风格1.jpg'), { recursive: true });
+
+  const catalog = await loadCatalog(root);
+  assert.deepEqual(catalog.styles, [{
+    id: '风格1',
+    name: '贴纸',
+    generated: true,
+    generatedAt: '2026-06-19T12:00:00.000Z',
+    previewUrl: null,
+  }]);
+  assert.equal(catalog.issues.length, 1);
+  assert.equal(catalog.issues[0].code, 'STYLE_PREVIEW_MISSING');
 });
 
 test('parses registered output formats and exact dimensions', () => {
@@ -202,9 +338,11 @@ test('workflow rules use the authoritative output format registry dynamically', 
 test('loadCatalog returns active styles and formats', async () => {
   const catalog = await loadCatalog(await fixture());
   assert.deepEqual(catalog.styles, [{
-    id: 'sticker',
+    id: '风格1',
     name: '贴纸',
-    thumbnailUrl: '/media/styles/sticker.png',
+    generated: false,
+    generatedAt: null,
+    previewUrl: null,
   }]);
   assert.deepEqual(catalog.formats, [{
     id: 'jp_711_photo_l_1051x1500',

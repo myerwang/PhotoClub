@@ -1,7 +1,6 @@
 ---
 style_id: punkzine
 name: 朋克杂志海报
-thumbnail: punkzine.png
 source_url: https://www.media.io/ai/explore/zone/gpt-image-2-prompts
 source_title: GPT Image 2 Prompts
 source_result: 27

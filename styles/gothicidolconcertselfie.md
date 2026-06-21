@@ -1,7 +1,6 @@
 ---
 style_id: gothicidolconcertselfie
 name: Gothic Idol Concert Selfie
-thumbnail: gothicidolconcertselfie.png
 source_url: https://github.com/gpt-image2/awesome-gptimage2-prompts
 source_title: gpt-image2/awesome-gptimage2-prompts
 source_result: 34

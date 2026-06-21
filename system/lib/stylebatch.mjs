@@ -167,7 +167,7 @@ function validateStyle(style) {
 }
 
 function renderStyle(style, result, checkedAt) {
-  return `---\nstyle_id: ${style.id}\nname: ${style.name}\nthumbnail: ${style.id}.png\nsource_url: ${result.url}\nsource_title: ${oneLine(result.title)}\nsource_result: ${result.rank}\nretrieved_at: ${checkedAt}\n---\n\n# Style: ${style.englishName}\n\n## Source Prompt\n\n${style.sourcePrompt}\n\n## Adaptation Log\n\n${bulletList(style.adaptations)}\n\n## Visual Rules\n\n${bulletList(style.visualRules)}\n\n## Composition\n\n${bulletList(style.composition)}\n\n## Lighting And Color\n\n${bulletList(style.lighting)}\n\n## Subject Boundary\n\n- Apply \`system/rules/style_base.md\`.\n- This style defines visual treatment only and does not restrict subject identity, attributes, count, or combinations.\n`;
+  return `---\nstyle_id: ${style.id}\nname: ${style.name}\nsource_url: ${result.url}\nsource_title: ${oneLine(result.title)}\nsource_result: ${result.rank}\nretrieved_at: ${checkedAt}\n---\n\n# Style: ${style.englishName}\n\n## Source Prompt\n\n${style.sourcePrompt}\n\n## Adaptation Log\n\n${bulletList(style.adaptations)}\n\n## Visual Rules\n\n${bulletList(style.visualRules)}\n\n## Composition\n\n${bulletList(style.composition)}\n\n## Lighting And Color\n\n${bulletList(style.lighting)}\n\n## Subject Boundary\n\n- Apply \`system/rules/style_base.md\`.\n- This style defines visual treatment only and does not restrict subject identity, attributes, count, or combinations.\n`;
 }
 
 export async function applyResult(rootDir, payload, { now = () => new Date() } = {}) {
@@ -267,11 +267,10 @@ export async function auditBatch(rootDir) {
       const stylePath = path.join(files.styles, `${style.id}.md`);
       let markdown = '';
       try { markdown = await readFile(stylePath, 'utf8'); } catch { errors.push(`missing style file: ${style.id}.md`); continue; }
-      if (!new RegExp(`^---[\\s\\S]*?style_id: ${style.id}[\\s\\S]*?thumbnail: ${style.id}\\.png[\\s\\S]*?source_url: https?://`, 'm').test(markdown)) {
+      if (!new RegExp(`^---[\\s\\S]*?style_id: ${style.id}[\\s\\S]*?source_url: https?://`, 'm').test(markdown)) {
         errors.push(`invalid style metadata: ${style.id}.md`);
       }
       if (!markdown.includes('## Source Prompt') || !markdown.includes('system/rules/style_base.md')) errors.push(`invalid style sections: ${style.id}.md`);
-      if (!await exists(path.join(files.styles, `${style.id}.png`))) warnings.push(`thumbnail missing as expected: ${style.id}.png`);
     }
   }
   return { errors, warnings, checkedResults: records.length, styles: ids.size };

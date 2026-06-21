@@ -35,6 +35,82 @@ function syncFailed(message) {
   return new AppError('STYLE_PREVIEW_SYNC_FAILED', message, 500);
 }
 
+function jobCancelled() {
+  return new AppError('JOB_CANCELLED', '任务已取消', 499);
+}
+
+const NOT_CANCELLED = Symbol('NOT_CANCELLED');
+
+function isDefaultAbortReason(reason) {
+  return (
+    typeof DOMException !== 'undefined'
+    && reason instanceof DOMException
+    && reason.name === 'AbortError'
+  );
+}
+
+function cancellationReason(signal) {
+  if (!signal?.aborted) return jobCancelled();
+  if (signal.reason === undefined || signal.reason === null || !signal.reason || isDefaultAbortReason(signal.reason)) {
+    return jobCancelled();
+  }
+  if (signal.reason instanceof Error || signal.reason instanceof AppError) {
+    return signal.reason;
+  }
+  return jobCancelled();
+}
+
+function throwIfAborted(signal) {
+  if (signal?.aborted) {
+    throw cancellationReason(signal);
+  }
+}
+
+function isCancellationError(error, signal) {
+  return (
+    (error instanceof AppError && error.code === 'JOB_CANCELLED')
+    || Boolean(signal?.aborted && error === signal.reason)
+  );
+}
+
+function normalizeCancellationError(error, signal) {
+  if (error instanceof AppError && error.code === 'JOB_CANCELLED') {
+    return error;
+  }
+  if (!isCancellationError(error, signal)) {
+    return NOT_CANCELLED;
+  }
+  return cancellationReason(signal);
+}
+
+async function sleepWithSignal(ms, sleepImpl, signal) {
+  throwIfAborted(signal);
+  if (!signal) {
+    await sleepImpl(ms);
+    return;
+  }
+
+  let removeAbortListener = () => {};
+  const abortPromise = new Promise((_, reject) => {
+    const onAbort = () => {
+      reject(cancellationReason(signal));
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+    removeAbortListener = () => {
+      signal.removeEventListener('abort', onAbort);
+    };
+  });
+
+  try {
+    await Promise.race([
+      Promise.resolve().then(() => sleepImpl(ms)),
+      abortPromise,
+    ]);
+  } finally {
+    removeAbortListener();
+  }
+}
+
 function isMissingError(error) {
   return error && typeof error === 'object' && error.code === 'ENOENT';
 }
@@ -420,7 +496,7 @@ async function quarantineMalformedLock(lockDirectory, observed, fsOps) {
   return true;
 }
 
-async function acquireStyleHistoryLock(rootDir, lockOptions) {
+async function acquireStyleHistoryLock(rootDir, lockOptions, signal) {
   const fsOps = normalizeLockOptions(lockOptions);
   const lockDirectory = lockPath(rootDir);
   const ownerToken = randomUUID();
@@ -429,6 +505,7 @@ async function acquireStyleHistoryLock(rootDir, lockOptions) {
   const deadline = lockNow(fsOps).getTime() + fsOps.timeoutMs;
 
   while (true) {
+    throwIfAborted(signal);
     try {
       await fsOps.mkdirImpl(lockDirectory);
       const createdAt = lockNow(fsOps).toISOString();
@@ -486,6 +563,7 @@ async function acquireStyleHistoryLock(rootDir, lockOptions) {
         throw syncFailed('风格历史锁获取失败');
       }
     }
+    throwIfAborted(signal);
 
     const observed = await readLockState(lockDirectory, fsOps);
     if (observed?.kind === 'released') {
@@ -508,7 +586,8 @@ async function acquireStyleHistoryLock(rootDir, lockOptions) {
     }
 
     if (lockNow(fsOps).getTime() >= deadline) break;
-    await fsOps.sleepImpl(fsOps.retryMs);
+    throwIfAborted(signal);
+    await sleepWithSignal(fsOps.retryMs, fsOps.sleepImpl, signal);
   }
 
   throw syncFailed('风格历史锁超时');
@@ -534,9 +613,15 @@ export async function readStyleHistory(rootDir) {
   }
 }
 
-export async function resizeWithSips(sourcePath, targetPath) {
+export async function resizeWithSips(
+  sourcePath,
+  targetPath,
+  { signal, spawnImpl = childProcess.spawn } = {},
+) {
+  throwIfAborted(signal);
+
   return new Promise((resolve, reject) => {
-    const child = childProcess.spawn('/usr/bin/sips', [
+    const child = spawnImpl('/usr/bin/sips', [
       '-s', 'format', 'jpeg',
       '-Z', '480',
       sourcePath,
@@ -544,21 +629,59 @@ export async function resizeWithSips(sourcePath, targetPath) {
     ], { stdio: 'ignore' });
 
     let settled = false;
-    const fail = () => {
+    let abortRequested = false;
+    let abortError;
+    const removeChildListener = (event, listener) => {
+      child.off?.(event, listener);
+      child.removeListener?.(event, listener);
+    };
+    const cleanup = () => {
+      signal?.removeEventListener('abort', abort);
+      removeChildListener('error', onError);
+      removeChildListener('close', onClose);
+    };
+    const finish = (callback, value) => {
       if (settled) return;
       settled = true;
-      reject(syncFailed('风格代表图缩放失败'));
+      cleanup();
+      callback(value);
     };
-
-    child.once('error', fail);
-    child.once('close', (code) => {
-      if (code === 0) {
-        if (!settled) resolve();
-        settled = true;
+    const fail = () => {
+      finish(reject, syncFailed('风格代表图缩放失败'));
+    };
+    const abort = () => {
+      if (abortRequested) return;
+      abortRequested = true;
+      abortError = cancellationReason(signal);
+      try {
+        child.kill();
+      } catch {
+        // Ignore child termination races during cancellation.
+      }
+    };
+    const onError = () => {
+      if (abortRequested) {
+        finish(reject, abortError);
         return;
       }
       fail();
-    });
+    };
+    const onClose = (code) => {
+      if (abortRequested) {
+        finish(reject, abortError);
+        return;
+      }
+      if (code === 0) {
+        finish(resolve);
+        return;
+      }
+      fail();
+    };
+
+    child.once('error', onError);
+    child.once('close', onClose);
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) abort();
   });
 }
 
@@ -569,12 +692,16 @@ export async function syncStylePreview({
   jobId,
   generatedAt = new Date().toISOString(),
   resizeImpl = resizeWithSips,
+  signal,
   accessImpl = access,
   renameImpl = rename,
   copyFileImpl = copyFile,
   unlinkImpl = unlink,
+  writeFileImpl = writeFile,
   lockOptions = {},
 }) {
+  throwIfAborted(signal);
+
   const safeStyleId = assertStyleId(styleId);
   const outputs = assertOutputPaths(outputPaths);
   const safeJobId = assertJobId(jobId);
@@ -600,7 +727,8 @@ export async function syncStylePreview({
     await accessImpl(sourcePath, constants.R_OK);
     await mkdir(previewDirectory, { recursive: true });
     await mkdir(controlDirectory, { recursive: true });
-    lock = await acquireStyleHistoryLock(rootDir, lockOptions);
+    lock = await acquireStyleHistoryLock(rootDir, lockOptions, signal);
+    throwIfAborted(signal);
 
     tempPreviewPath = path.join(previewDirectory, `.${safeStyleId}.${randomUUID()}.jpg`);
     tempHistoryPath = path.join(controlDirectory, `.style-history.${randomUUID()}.json`);
@@ -609,7 +737,8 @@ export async function syncStylePreview({
     const history = await readStyleHistory(rootDir);
 
     try {
-      await resizeImpl(sourcePath, tempPreviewPath);
+      await resizeImpl(sourcePath, tempPreviewPath, { signal });
+      throwIfAborted(signal);
 
       try {
         await accessImpl(finalPreviewPath, constants.F_OK);
@@ -621,9 +750,12 @@ export async function syncStylePreview({
         }
       }
 
+      throwIfAborted(signal);
       await lock.assertOwned();
+      throwIfAborted(signal);
       await renameImpl(tempPreviewPath, finalPreviewPath);
       finalInstalled = true;
+      throwIfAborted(signal);
 
       const record = {
         styleId: safeStyleId,
@@ -634,8 +766,10 @@ export async function syncStylePreview({
       };
       const nextHistory = { ...history, [safeStyleId]: record };
 
-      await writeFile(tempHistoryPath, `${JSON.stringify(nextHistory, null, 2)}\n`);
+      await writeFileImpl(tempHistoryPath, `${JSON.stringify(nextHistory, null, 2)}\n`);
+      throwIfAborted(signal);
       await lock.assertOwned();
+      throwIfAborted(signal);
       await renameImpl(tempHistoryPath, historyFilePath);
       historyCommitted = true;
 
@@ -663,15 +797,23 @@ export async function syncStylePreview({
         }
       }
 
+      const cancellationError = normalizeCancellationError(error, signal);
+      if (cancellationError !== NOT_CANCELLED) throw cancellationError;
       if (error instanceof AppError) throw error;
       throw syncFailed('风格代表图同步失败');
     }
   } catch (error) {
+    const cancellationError = normalizeCancellationError(error, signal);
+    if (cancellationError !== NOT_CANCELLED) throw cancellationError;
     if (error instanceof AppError) throw error;
     throw syncFailed('风格代表图同步失败');
   } finally {
     if (lock) {
-      await lock.release();
+      try {
+        await lock.release();
+      } catch (error) {
+        if (!historyCommitted) throw error;
+      }
     }
 
     await Promise.allSettled([

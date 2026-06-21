@@ -1,7 +1,6 @@
 ---
 style_id: highrise
 name: 高楼镜像
-thumbnail: highrise.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

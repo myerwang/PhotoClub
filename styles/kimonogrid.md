@@ -1,7 +1,6 @@
 ---
 style_id: kimonogrid
 name: 和服分解图鉴
-thumbnail: kimonogrid.png
 source_url: https://www.glbgpt.com/resources/japan-gpt-image-2-prompt-guide/
 source_title: GPT Image 2 プロンプトガイド：曖昧なアイデアから正確な画像 ...
 source_result: 33

@@ -13,3 +13,10 @@ docs/
 
 profiles/*
 !profiles/README.md
+
+styles/*.png
+styles/*.jpg
+styles/*.jpeg
+styles/*.webp
+styles/previews/*
+!styles/previews/README.md

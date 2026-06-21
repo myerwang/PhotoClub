@@ -1,7 +1,6 @@
 ---
 style_id: cinematicportrait3dminichara
 name: Cinematic Portrait with 3D Mini Character
-thumbnail: cinematicportrait3dminichara.png
 source_url: https://github.com/gpt-image2/awesome-gptimage2-prompts
 source_title: gpt-image2/awesome-gptimage2-prompts
 source_result: 34

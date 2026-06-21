@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { EventEmitter } from 'node:events';
 import { constants } from 'node:fs';
 import {
+  access,
   copyFile,
   mkdtemp,
   mkdir,
@@ -19,7 +21,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { AppError } from '../lib/errors.mjs';
-import { readStyleHistory, syncStylePreview } from '../lib/stylepreview.mjs';
+import { readStyleHistory, resizeWithSips, syncStylePreview } from '../lib/stylepreview.mjs';
 
 async function createRoot() {
   return mkdtemp(path.join(tmpdir(), 'style-preview-'));
@@ -44,6 +46,37 @@ function deferred() {
     reject = rejectPromise;
   });
   return { promise, reject, resolve };
+}
+
+function createSignalDouble() {
+  let aborted = false;
+  let reason;
+  const listeners = new Set();
+
+  return {
+    signal: {
+      addEventListener(type, listener) {
+        if (type === 'abort') listeners.add(listener);
+      },
+      get aborted() {
+        return aborted;
+      },
+      get reason() {
+        return reason;
+      },
+      removeEventListener(type, listener) {
+        if (type === 'abort') listeners.delete(listener);
+      },
+    },
+    abort(nextReason) {
+      aborted = true;
+      reason = nextReason;
+      for (const listener of [...listeners]) listener();
+    },
+    get listenerCount() {
+      return listeners.size;
+    },
+  };
 }
 
 async function waitFor(predicate, message) {
@@ -167,6 +200,25 @@ async function runNodeModule(source) {
   return { exitCode, stderr, stdout };
 }
 
+async function runStylePreviewScript(args) {
+  const child = spawn(process.execPath, [path.resolve('system/tools/syncstylepreview.mjs'), ...args], {
+    cwd: path.resolve('.'),
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let stdout = '';
+  let stderr = '';
+  child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+  child.stdout.on('data', (chunk) => { stdout += chunk; });
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
+
+  const exitCode = await new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('close', resolve);
+  });
+  return { exitCode, stderr, stdout };
+}
+
 async function readLockOwner(rootDir) {
   const lockFilePath = path.join(rootDir, '.control', 'style-history.lock');
   const lockStats = await stat(lockFilePath);
@@ -187,6 +239,53 @@ async function removeLock(rootDir) {
     return;
   }
   await unlink(lockFilePath);
+}
+
+async function writeTinyBmp(filePath, red, green, blue) {
+  const buffer = Buffer.alloc(58);
+  buffer.write('BM', 0, 'ascii');
+  buffer.writeUInt32LE(buffer.length, 2);
+  buffer.writeUInt32LE(54, 10);
+  buffer.writeUInt32LE(40, 14);
+  buffer.writeInt32LE(1, 18);
+  buffer.writeInt32LE(1, 22);
+  buffer.writeUInt16LE(1, 26);
+  buffer.writeUInt16LE(24, 28);
+  buffer.writeUInt32LE(0, 30);
+  buffer.writeUInt32LE(4, 34);
+  buffer.writeInt32LE(2835, 38);
+  buffer.writeInt32LE(2835, 42);
+  buffer.writeUInt32LE(0, 46);
+  buffer.writeUInt32LE(0, 50);
+  buffer[54] = blue;
+  buffer[55] = green;
+  buffer[56] = red;
+  buffer[57] = 0;
+
+  await mkdir(path.dirname(filePath), { recursive: true });
+  await writeFile(filePath, buffer);
+  return filePath;
+}
+
+async function expectNoStylePreviewArtifacts(rootDir, styleId) {
+  const previewDirectory = path.join(rootDir, 'styles', 'previews');
+  const controlDirectory = path.join(rootDir, '.control');
+  const previewFilePath = path.join(previewDirectory, `${styleId}.jpg`);
+
+  await assert.rejects(readFile(previewFilePath, 'utf8'));
+  await assert.rejects(stat(path.join(controlDirectory, 'style-history.lock')));
+
+  try {
+    assert.deepEqual(await readdir(previewDirectory), []);
+  } catch (error) {
+    if (!error || typeof error !== 'object' || error.code !== 'ENOENT') throw error;
+  }
+
+  try {
+    assert.deepEqual(await readdir(controlDirectory), []);
+  } catch (error) {
+    if (!error || typeof error !== 'object' || error.code !== 'ENOENT') throw error;
+  }
 }
 
 test('readStyleHistory returns an empty object when history is missing', async () => {
@@ -253,6 +352,27 @@ test('syncStylePreview uses the last output path and preserves existing history'
   assert.deepEqual(history.sticker, record);
 });
 
+test('syncStylePreview keeps exactly one independently replaceable preview per style', async () => {
+  const rootDir = await createRoot();
+  const alphaFirst = await writeOutput(rootDir, 'alpha-first.png', 'alpha-first');
+  const alphaLast = await writeOutput(rootDir, 'alpha-last.png', 'alpha-last');
+  const alphaNext = await writeOutput(rootDir, 'alpha-next.png', 'alpha-next');
+  const beta = await writeOutput(rootDir, 'beta.png', 'beta');
+  const resizeImpl = (sourcePath, targetPath) => copyFile(sourcePath, targetPath);
+
+  await syncStylePreview({ rootDir, styleId: 'alpha', outputPaths: [alphaFirst, alphaLast], jobId: 'job-alpha-1', resizeImpl });
+  await syncStylePreview({ rootDir, styleId: 'beta', outputPaths: [beta], jobId: 'job-beta-1', resizeImpl });
+  await syncStylePreview({ rootDir, styleId: 'alpha', outputPaths: [alphaNext], jobId: 'job-alpha-2', resizeImpl });
+
+  const previewDirectory = path.join(rootDir, 'styles', 'previews');
+  assert.deepEqual((await readdir(previewDirectory)).sort(), ['alpha.jpg', 'beta.jpg']);
+  assert.equal(await readFile(path.join(previewDirectory, 'alpha.jpg'), 'utf8'), 'alpha-next');
+  assert.equal(await readFile(path.join(previewDirectory, 'beta.jpg'), 'utf8'), 'beta');
+  const history = await readStyleHistory(rootDir);
+  assert.equal(history.alpha.jobId, 'job-alpha-2');
+  assert.equal(history.beta.jobId, 'job-beta-1');
+});
+
 test('syncStylePreview stores the local process pid in its lease', async () => {
   const rootDir = await createRoot();
   const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
@@ -271,6 +391,434 @@ test('syncStylePreview stores the local process pid in its lease', async () => {
 
   assert.equal(lease.pid, process.pid);
   assert.equal(typeof lease.ownerToken, 'string');
+});
+
+test('resizeWithSips rejects immediately when signal is already aborted', async () => {
+  const controller = new AbortController();
+  const reason = new Error('cancel before spawn');
+  controller.abort(reason);
+
+  await assert.rejects(
+    resizeWithSips('/tmp/source-does-not-matter', '/tmp/target-does-not-matter', { signal: controller.signal }),
+    (error) => error === reason,
+  );
+});
+
+test('resizeWithSips waits for child exit before rejecting an in-flight abort', async () => {
+  const child = new EventEmitter();
+  const signalDouble = createSignalDouble();
+  const cancelReason = new Error('cancel while resizing');
+  const observed = [];
+  child.killCalls = 0;
+  child.kill = () => {
+    child.killCalls += 1;
+    return true;
+  };
+
+  const operation = resizeWithSips('/tmp/source-does-not-matter', '/tmp/target-does-not-matter', {
+    signal: signalDouble.signal,
+    spawnImpl: () => child,
+  });
+  operation.then(
+    () => observed.push('resolved'),
+    (error) => observed.push(error),
+  );
+
+  signalDouble.abort(cancelReason);
+
+  assert.equal(child.killCalls, 1);
+  assert.equal(signalDouble.listenerCount, 1);
+  assert.equal(child.listenerCount('close'), 1);
+  assert.equal(child.listenerCount('error'), 1);
+  assert.deepEqual(
+    await Promise.race([
+      operation.then(
+        () => ({ status: 'resolved' }),
+        (error) => ({ status: 'rejected', error }),
+      ),
+      new Promise((resolve) => setTimeout(() => resolve({ status: 'pending' }), 20)),
+    ]),
+    { status: 'pending' },
+  );
+
+  child.emit('close', 1);
+  await assert.rejects(operation, (error) => error === cancelReason);
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(observed, [cancelReason]);
+  assert.equal(signalDouble.listenerCount, 0);
+  assert.equal(child.listenerCount('close'), 0);
+  assert.equal(child.listenerCount('error'), 0);
+
+  child.emit('close', 1);
+  child.on('error', () => {});
+  child.emit('error', new Error('late'));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(observed, [cancelReason]);
+});
+
+test('resizeWithSips rejects with JOB_CANCELLED after close when aborted with a null reason', async () => {
+  const child = new EventEmitter();
+  const signalDouble = createSignalDouble();
+  child.killCalls = 0;
+  child.kill = () => {
+    child.killCalls += 1;
+    return true;
+  };
+
+  const operation = resizeWithSips('/tmp/source-does-not-matter', '/tmp/target-does-not-matter', {
+    signal: signalDouble.signal,
+    spawnImpl: () => child,
+  });
+
+  signalDouble.abort(null);
+  assert.equal(child.killCalls, 1);
+
+  child.emit('close', 0);
+  await assert.rejects(
+    operation,
+    (error) => error instanceof AppError && error.code === 'JOB_CANCELLED',
+  );
+});
+
+test('syncStylePreview rejects with JOB_CANCELLED before starting when signal is already aborted', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const controller = new AbortController();
+  controller.abort();
+
+  await expectAppErrorCode(
+    syncStylePreview({
+      rootDir,
+      styleId: 'sticker',
+      outputPaths: [sourcePath],
+      jobId: 'job-1',
+      signal: controller.signal,
+    }),
+    'JOB_CANCELLED',
+  );
+
+  await expectNoStylePreviewArtifacts(rootDir, 'sticker');
+});
+
+test('syncStylePreview rejects after lock acquisition when signal aborts before resize starts', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const controller = new AbortController();
+  let resizeStarted = false;
+
+  await expectAppErrorCode(
+    syncStylePreview({
+      rootDir,
+      styleId: 'sticker',
+      outputPaths: [sourcePath],
+      jobId: 'job-1',
+      signal: controller.signal,
+      lockOptions: {
+        writeFileImpl: async (targetPath, contents, options) => {
+          await writeFile(targetPath, contents, options);
+          if (targetPath.includes('style-history.lock') && targetPath.endsWith('.json')) {
+            controller.abort();
+          }
+        },
+      },
+      resizeImpl: async () => {
+        resizeStarted = true;
+      },
+    }),
+    'JOB_CANCELLED',
+  );
+
+  assert.equal(resizeStarted, false);
+  await expectNoStylePreviewArtifacts(rootDir, 'sticker');
+});
+
+test('syncStylePreview removes preview, history, temp files, and lock when cancelled during resize', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const controller = new AbortController();
+  const started = deferred();
+  const cancelReason = new Error('cancel during resize');
+
+  const operation = syncStylePreview({
+    rootDir,
+    styleId: 'sticker',
+    outputPaths: [sourcePath],
+    jobId: 'job-1',
+    signal: controller.signal,
+    resizeImpl: async (_sourcePath, targetPath, { signal }) => {
+      assert.equal(signal, controller.signal);
+      await writeFile(targetPath, 'partial-preview');
+      started.resolve();
+      await new Promise((resolve, reject) => {
+        const onAbort = () => reject(signal.reason);
+        signal.addEventListener('abort', onAbort, { once: true });
+      });
+    },
+  });
+
+  await started.promise;
+  controller.abort(cancelReason);
+
+  await assert.rejects(operation, (error) => error === cancelReason);
+  await expectNoStylePreviewArtifacts(rootDir, 'sticker');
+  assert.deepEqual(await readStyleHistory(rootDir), {});
+});
+
+test('syncStylePreview rejects after resize when signal aborts before final install', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const previewPath = path.join(rootDir, 'styles', 'previews', 'sticker.jpg');
+  const controller = new AbortController();
+  const cancelReason = new Error('cancel after resize');
+  await mkdir(path.dirname(previewPath), { recursive: true });
+  await writeFile(previewPath, 'old-preview');
+
+  await assert.rejects(
+    syncStylePreview({
+      rootDir,
+      styleId: 'sticker',
+      outputPaths: [sourcePath],
+      jobId: 'job-1',
+      signal: controller.signal,
+      resizeImpl: async (_sourcePath, targetPath) => {
+        await writeFile(targetPath, 'new-preview');
+        controller.abort(cancelReason);
+      },
+    }),
+    (error) => error === cancelReason,
+  );
+
+  assert.equal(await readFile(previewPath, 'utf8'), 'old-preview');
+  assert.deepEqual(await readdir(path.dirname(previewPath)), ['sticker.jpg']);
+  assert.deepEqual(await readStyleHistory(rootDir), {});
+  assert.deepEqual(await readdir(path.join(rootDir, '.control')), []);
+});
+
+test('syncStylePreview restores the old preview when signal aborts after final install and before history write', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const previewPath = path.join(rootDir, 'styles', 'previews', 'sticker.jpg');
+  const historyFilePath = path.join(rootDir, '.control', 'style-history.json');
+  const oldRecord = {
+    styleId: 'sticker',
+    generatedAt: '2026-06-19T11:00:00.000Z',
+    jobId: 'job-old',
+    sourcePath: '/gone/old.png',
+    preview: 'styles/previews/sticker.jpg',
+  };
+  const controller = new AbortController();
+  const cancelReason = new Error('cancel before history write');
+  await mkdir(path.dirname(previewPath), { recursive: true });
+  await mkdir(path.dirname(historyFilePath), { recursive: true });
+  await writeFile(previewPath, 'old-preview');
+  await writeFile(historyFilePath, JSON.stringify({ sticker: oldRecord }));
+
+  await assert.rejects(
+    syncStylePreview({
+      rootDir,
+      styleId: 'sticker',
+      outputPaths: [sourcePath],
+      jobId: 'job-1',
+      signal: controller.signal,
+      resizeImpl: async (_sourcePath, targetPath) => {
+        await writeFile(targetPath, 'new-preview');
+      },
+      renameImpl: async (from, to) => {
+        await rename(from, to);
+        if (to === previewPath) controller.abort(cancelReason);
+      },
+    }),
+    (error) => error === cancelReason,
+  );
+
+  assert.equal(await readFile(previewPath, 'utf8'), 'old-preview');
+  assert.deepEqual(await readStyleHistory(rootDir), { sticker: oldRecord });
+  assert.deepEqual(await readdir(path.dirname(previewPath)), ['sticker.jpg']);
+  assert.deepEqual(await readdir(path.dirname(historyFilePath)), ['style-history.json']);
+});
+
+test('syncStylePreview restores the old preview when signal aborts before history commit', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const previewPath = path.join(rootDir, 'styles', 'previews', 'sticker.jpg');
+  const historyFilePath = path.join(rootDir, '.control', 'style-history.json');
+  const oldRecord = {
+    styleId: 'sticker',
+    generatedAt: '2026-06-19T11:00:00.000Z',
+    jobId: 'job-old',
+    sourcePath: '/gone/old.png',
+    preview: 'styles/previews/sticker.jpg',
+  };
+  const controller = new AbortController();
+  const cancelReason = new Error('cancel before history commit');
+  await mkdir(path.dirname(previewPath), { recursive: true });
+  await mkdir(path.dirname(historyFilePath), { recursive: true });
+  await writeFile(previewPath, 'old-preview');
+  await writeFile(historyFilePath, JSON.stringify({ sticker: oldRecord }));
+
+  await assert.rejects(
+    syncStylePreview({
+      rootDir,
+      styleId: 'sticker',
+      outputPaths: [sourcePath],
+      jobId: 'job-1',
+      signal: controller.signal,
+      resizeImpl: async (_sourcePath, targetPath) => {
+        await writeFile(targetPath, 'new-preview');
+      },
+      writeFileImpl: async (targetPath, contents, options) => {
+        await writeFile(targetPath, contents, options);
+        if (targetPath !== historyFilePath && targetPath.includes('.style-history.')) {
+          controller.abort(cancelReason);
+        }
+      },
+    }),
+    (error) => error === cancelReason,
+  );
+
+  assert.equal(await readFile(previewPath, 'utf8'), 'old-preview');
+  assert.deepEqual(await readStyleHistory(rootDir), { sticker: oldRecord });
+  assert.deepEqual(await readdir(path.dirname(previewPath)), ['sticker.jpg']);
+  assert.deepEqual(await readdir(path.dirname(historyFilePath)), ['style-history.json']);
+});
+
+test('syncStylePreview restores the old preview when signal aborts after lock ownership check and before history commit rename', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const previewPath = path.join(rootDir, 'styles', 'previews', 'sticker.jpg');
+  const historyFilePath = path.join(rootDir, '.control', 'style-history.json');
+  const oldRecord = {
+    styleId: 'sticker',
+    generatedAt: '2026-06-19T11:00:00.000Z',
+    jobId: 'job-old',
+    sourcePath: '/gone/old.png',
+    preview: 'styles/previews/sticker.jpg',
+  };
+  const controller = new AbortController();
+  const cancelReason = new Error('cancel after assertOwned');
+  let commitRenames = 0;
+  let leaseReads = 0;
+  await mkdir(path.dirname(previewPath), { recursive: true });
+  await mkdir(path.dirname(historyFilePath), { recursive: true });
+  await writeFile(previewPath, 'old-preview');
+  await writeFile(historyFilePath, JSON.stringify({ sticker: oldRecord }));
+
+  await assert.rejects(
+    syncStylePreview({
+      rootDir,
+      styleId: 'sticker',
+      outputPaths: [sourcePath],
+      jobId: 'job-1',
+      signal: controller.signal,
+      lockOptions: {
+        readFileImpl: async (targetPath, encoding) => {
+          const contents = await readFile(targetPath, encoding);
+          if (targetPath.endsWith('.json')) {
+            leaseReads += 1;
+            if (leaseReads === 2) queueMicrotask(() => controller.abort(cancelReason));
+          }
+          return contents;
+        },
+      },
+      resizeImpl: async (_sourcePath, targetPath) => {
+        await writeFile(targetPath, 'new-preview');
+      },
+      renameImpl: async (from, to) => {
+        if (to === historyFilePath) commitRenames += 1;
+        await rename(from, to);
+      },
+    }),
+    (error) => error === cancelReason,
+  );
+
+  assert.equal(commitRenames, 0);
+  assert.equal(await readFile(previewPath, 'utf8'), 'old-preview');
+  assert.deepEqual(await readStyleHistory(rootDir), { sticker: oldRecord });
+  assert.deepEqual(await readdir(path.dirname(previewPath)), ['sticker.jpg']);
+  assert.deepEqual(await readdir(path.dirname(historyFilePath)), ['style-history.json']);
+});
+
+test('syncStylePreview normalizes the default AbortError from custom resizeImpl to JOB_CANCELLED', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const controller = new AbortController();
+  let abortReason;
+
+  await expectAppErrorCode(
+    syncStylePreview({
+      rootDir,
+      styleId: 'sticker',
+      outputPaths: [sourcePath],
+      jobId: 'job-1',
+      signal: controller.signal,
+      resizeImpl: async () => {
+        controller.abort();
+        abortReason = controller.signal.reason;
+        throw abortReason;
+      },
+    }),
+    'JOB_CANCELLED',
+  );
+
+  assert.equal(abortReason?.name, 'AbortError');
+  await expectNoStylePreviewArtifacts(rootDir, 'sticker');
+});
+
+test('syncStylePreview normalizes falsy abort reasons from custom resizeImpl to JOB_CANCELLED', async () => {
+  for (const reason of [null, false, 0]) {
+    const rootDir = await createRoot();
+    const sourcePath = await writeOutput(rootDir, `source-${String(reason)}.txt`, 'source');
+    const controller = new AbortController();
+    let abortReason;
+
+    await expectAppErrorCode(
+      syncStylePreview({
+        rootDir,
+        styleId: 'sticker',
+        outputPaths: [sourcePath],
+        jobId: `job-${String(reason)}`,
+        signal: controller.signal,
+        resizeImpl: async () => {
+          controller.abort(reason);
+          abortReason = controller.signal.reason;
+          throw abortReason;
+        },
+      }),
+      'JOB_CANCELLED',
+    );
+
+    assert.equal(abortReason, reason);
+    await expectNoStylePreviewArtifacts(rootDir, 'sticker');
+  }
+});
+
+test('syncStylePreview returns success when signal aborts after history commit', async () => {
+  const rootDir = await createRoot();
+  const sourcePath = await writeOutput(rootDir, 'source.txt', 'source');
+  const previewPath = path.join(rootDir, 'styles', 'previews', 'sticker.jpg');
+  const historyFilePath = path.join(rootDir, '.control', 'style-history.json');
+  const controller = new AbortController();
+  const cancelReason = new Error('cancel too late');
+
+  const record = await syncStylePreview({
+    rootDir,
+    styleId: 'sticker',
+    outputPaths: [sourcePath],
+    jobId: 'job-1',
+    signal: controller.signal,
+    resizeImpl: async (_sourcePath, targetPath) => {
+      await writeFile(targetPath, 'new-preview');
+    },
+    renameImpl: async (from, to) => {
+      await rename(from, to);
+      if (to === historyFilePath) controller.abort(cancelReason);
+    },
+  });
+
+  assert.equal(record.styleId, 'sticker');
+  assert.equal(await readFile(previewPath, 'utf8'), 'new-preview');
+  assert.deepEqual(await readStyleHistory(rootDir), { sticker: record });
 });
 
 test('syncStylePreview rejects unsafe ids and empty inputs', async () => {
@@ -872,14 +1420,14 @@ test('syncStylePreview publishes releasedAt when marker rename fails for cross-p
   assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
 });
 
-test('syncStylePreview surfaces release failure when marker and releasedAt publication both fail', async () => {
+test('syncStylePreview does not overturn a committed preview when release publication fails', async () => {
   const rootDir = await createRoot();
   const sourcePath = await writeOutput(rootDir, 'source.png', 'source');
   let fallbackWrites = 0;
-  let caught;
+  let result;
 
   try {
-    await syncStylePreview({
+    result = await syncStylePreview({
       rootDir,
       styleId: 'alpha',
       outputPaths: [sourcePath],
@@ -907,13 +1455,7 @@ test('syncStylePreview surfaces release failure when marker and releasedAt publi
         await writeFile(targetPath, 'alpha');
       },
     });
-  } catch (error) {
-    caught = error;
-  }
-
-  try {
-    assert.ok(caught instanceof AppError);
-    assert.equal(caught.code, 'STYLE_PREVIEW_SYNC_FAILED');
+    assert.equal(result.styleId, 'alpha');
     assert.equal(fallbackWrites, 1);
     assert.equal((await readStyleHistory(rootDir)).alpha.styleId, 'alpha');
   } finally {
@@ -1161,6 +1703,73 @@ test('syncStylePreview keeps a long-running lock alive while later writers wait'
   assert.equal(timing.unrefCount, 3);
 });
 
+test('syncStylePreview aborts promptly while waiting for the style history lock', async () => {
+  const rootDir = await createRoot();
+  const firstSource = await writeOutput(rootDir, 'first.png', 'first');
+  const secondSource = await writeOutput(rootDir, 'second.png', 'second');
+  const timing = createLockTiming();
+  const firstCanFinish = deferred();
+  const firstStarted = deferred();
+  const secondController = new AbortController();
+  const cancelReason = new Error('cancel waiting for lock');
+  const starts = [];
+
+  const first = syncStylePreview({
+    rootDir,
+    styleId: 'alpha',
+    outputPaths: [firstSource],
+    jobId: 'job-a',
+    lockOptions: timing.options,
+    resizeImpl: async (_sourcePath, targetPath) => {
+      starts.push('alpha');
+      firstStarted.resolve();
+      await writeFile(targetPath, 'alpha');
+      await firstCanFinish.promise;
+    },
+  });
+  await firstStarted.promise;
+
+  const second = syncStylePreview({
+    rootDir,
+    styleId: 'beta',
+    outputPaths: [secondSource],
+    jobId: 'job-b',
+    signal: secondController.signal,
+    lockOptions: timing.options,
+    resizeImpl: async () => {
+      starts.push('beta');
+      throw new Error('second writer must not acquire the lock');
+    },
+  });
+
+  await waitFor(() => timing.pendingSleeps === 1, 'second writer did not block on the active lease');
+  secondController.abort(cancelReason);
+
+  const secondResult = await Promise.race([
+    second.then(
+      () => ({ status: 'resolved' }),
+      (error) => ({ status: 'rejected', error }),
+    ),
+    new Promise((resolve) => setTimeout(() => resolve({ status: 'timed_out' }), 50)),
+  ]);
+
+  assert.deepEqual(secondResult, { status: 'rejected', error: cancelReason });
+  assert.deepEqual(starts, ['alpha']);
+  assert.deepEqual(await readStyleHistory(rootDir), {});
+  await assert.rejects(readFile(path.join(rootDir, 'styles', 'previews', 'beta.jpg'), 'utf8'));
+  assert.equal(timing.timerCount, 1);
+
+  firstCanFinish.resolve();
+  timing.releaseNextSleep();
+  await first;
+
+  const history = await readStyleHistory(rootDir);
+  assert.deepEqual(Object.keys(history), ['alpha']);
+  assert.equal(history.alpha.styleId, 'alpha');
+  assert.deepEqual(await readdir(path.join(rootDir, '.control')), ['style-history.json']);
+  assert.equal(timing.timerCount, 0);
+});
+
 test('syncStylePreview quarantines and recovers a stale partially written lock', async () => {
   const rootDir = await createRoot();
   const sourcePath = await writeOutput(rootDir, 'source.png', 'source');
@@ -1366,4 +1975,76 @@ test('syncStylePreview rejects unreadable source paths', async () => {
 
   assert.equal(accessMode, constants.R_OK);
   assert.deepEqual(await readStyleHistory(rootDir), {});
+});
+
+const sipsAvailable = await access('/usr/bin/sips', constants.X_OK).then(() => true, () => false);
+const cliStylePreviewTest = sipsAvailable ? test : test.skip;
+
+test('package.json exposes the stylepreview script', async () => {
+  const packageJson = JSON.parse(await readFile(path.resolve('package.json'), 'utf8'));
+  assert.equal(packageJson.scripts.stylepreview, 'node system/tools/syncstylepreview.mjs');
+});
+
+test('stylepreview fails fast with usage for missing and malformed arguments', async () => {
+  const missing = await runStylePreviewScript([
+    '--job', '--root',
+    '--output', 'missing.bmp',
+  ]);
+  assert.equal(missing.exitCode, 1);
+  assert.equal(missing.stdout, '');
+  assert.match(missing.stderr.trim(), /^usage: stylepreview /u);
+
+  const consumedFlag = await runStylePreviewScript([
+    '--style', 'sticker',
+    '--job', '--root',
+    '--output', 'missing.bmp',
+  ]);
+  assert.equal(consumedFlag.exitCode, 1);
+  assert.equal(consumedFlag.stdout, '');
+  assert.match(consumedFlag.stderr.trim(), /^usage: stylepreview /u);
+
+  const empty = await runStylePreviewScript([
+    '--style', 'sticker',
+    '--job', '',
+    '--output', 'missing.bmp',
+  ]);
+  assert.equal(empty.exitCode, 1);
+  assert.equal(empty.stdout, '');
+  assert.match(empty.stderr.trim(), /^usage: stylepreview /u);
+});
+
+cliStylePreviewTest('stylepreview prints one JSON line for the last output', async () => {
+  const rootDir = await createRoot();
+  const firstOutput = await writeTinyBmp(path.join(rootDir, 'output', 'first.bmp'), 240, 80, 80);
+  const lastOutput = await writeTinyBmp(path.join(rootDir, 'output', 'last.bmp'), 80, 120, 240);
+
+  const result = await runStylePreviewScript([
+    '--style', 'sticker',
+    '--job', 'job-1',
+    '--output', path.relative(rootDir, firstOutput),
+    '--output', path.relative(rootDir, lastOutput),
+    '--root', rootDir,
+  ]);
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.stderr, '');
+  const lines = result.stdout.trim().split('\n');
+  assert.equal(lines.length, 1);
+  const record = JSON.parse(lines[0]);
+  assert.equal(record.styleId, 'sticker');
+  assert.equal(record.jobId, 'job-1');
+  assert.equal(record.sourcePath, lastOutput);
+  assert.equal(record.preview, 'styles/previews/sticker.jpg');
+  await access(path.join(rootDir, 'styles', 'previews', 'sticker.jpg'), constants.F_OK);
+});
+
+cliStylePreviewTest('stylepreview fails cleanly for missing required args', async () => {
+  const result = await runStylePreviewScript([
+    '--job', 'job-1',
+    '--output', 'output/last.bmp',
+  ]);
+
+  assert.equal(result.exitCode, 1);
+  assert.equal(result.stdout, '');
+  assert.match(result.stderr.trim(), /^usage: stylepreview /u);
 });

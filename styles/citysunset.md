@@ -1,7 +1,6 @@
 ---
 style_id: citysunset
 name: 都市落日
-thumbnail: citysunset.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

@@ -1,7 +1,6 @@
 ---
 style_id: redsuit
 name: 红幕白装
-thumbnail: redsuit.png
 source_url: https://github.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
 source_title: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
 source_result: 2

@@ -1,7 +1,6 @@
 ---
 style_id: iphonecandid
 name: 手机抓拍
-thumbnail: iphonecandid.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

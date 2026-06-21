@@ -1,7 +1,6 @@
 ---
 style_id: sticker
 name: 贴纸
-thumbnail: sticker.png
 ---
 
 # Style: Sticker

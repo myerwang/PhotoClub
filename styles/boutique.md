@@ -1,7 +1,6 @@
 ---
 style_id: boutique
 name: 精品店时尚
-thumbnail: boutique.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

@@ -1,7 +1,6 @@
 ---
 style_id: goldrain
 name: 金色雨街
-thumbnail: goldrain.png
 source_url: https://github.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
 source_title: EvoLinkAI/awesome-gpt-image-2-API-and-Prompts
 source_result: 2

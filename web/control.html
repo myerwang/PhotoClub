@@ -27,7 +27,14 @@
     </section>
 
     <section aria-labelledby="style-title">
-      <div class="section-heading"><h2 id="style-title" data-i18n="section.styles">风格</h2><span id="style-count"></span></div>
+      <div class="section-heading">
+        <h2 id="style-title" data-i18n="section.styles">风格</h2>
+        <span class="section-tools style-tools">
+          <span id="style-count"></span>
+          <button id="style-select-all" type="button" class="compact-button" aria-pressed="false" data-testid="style-select-all" data-i18n="button.selectAllStyles">全选可见风格</button>
+          <button id="style-only-new" type="button" class="compact-button compact-toggle" aria-pressed="false" data-testid="style-only-new" data-i18n="button.onlyUngenerated">仅看未生成</button>
+        </span>
+      </div>
       <div id="styles" class="style-grid" data-testid="styles"></div>
     </section>
 
@@ -35,6 +42,19 @@
       <section class="settings" aria-labelledby="settings-title">
         <h2 id="settings-title" data-i18n="section.settings">输出设置</h2>
         <fieldset><legend data-i18n="field.printFormat">打印格式</legend><div id="formats" class="segments" data-testid="formats"></div></fieldset>
+        <div id="custom-format-block" class="custom-format-block" hidden>
+          <div class="custom-format-row">
+            <label class="custom-format-field" for="custom-short-edge">
+              <span class="custom-format-heading"><span data-i18n="field.shortEdge">短边</span><span class="custom-format-unit" data-i18n="field.pixels">像素</span></span>
+              <input id="custom-short-edge" type="number" min="256" max="8192" step="1" value="1200" inputmode="numeric" data-testid="custom-short-edge">
+            </label>
+            <label class="custom-format-field" for="custom-long-edge">
+              <span class="custom-format-heading"><span data-i18n="field.longEdge">长边</span><span class="custom-format-unit" data-i18n="field.pixels">像素</span></span>
+              <input id="custom-long-edge" type="number" min="256" max="8192" step="1" value="1800" inputmode="numeric" data-testid="custom-long-edge">
+            </label>
+          </div>
+          <p class="muted" data-i18n="hint.customFormat">短边和长边均需为 256–8192 像素，总像素不超过 4000 万；方向由照片方向控制。</p>
+        </div>
         <fieldset><legend data-i18n="field.orientation">照片方向</legend><div id="orientations" class="segments" data-testid="orientations">
           <label class="segment"><input type="radio" name="orientation" value="portrait" checked><span data-i18n="field.portrait">纵向</span></label>
           <label class="segment"><input type="radio" name="orientation" value="landscape"><span data-i18n="field.landscape">横向</span></label>

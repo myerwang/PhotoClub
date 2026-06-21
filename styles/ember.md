@@ -1,7 +1,6 @@
 ---
 style_id: ember
 name: 赤焰极简
-thumbnail: ember.png
 source_url: https://evolink.ai/gpt-image-2-prompts
 source_title: GPT Image 2 Prompts
 source_result: 1

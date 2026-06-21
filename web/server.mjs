@@ -1,15 +1,18 @@
 import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { access, mkdir, readFile, readdir, rename, rmdir, unlink, writeFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { access, lstat, mkdir, readFile, readdir, rename, rmdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { assertSafeId, loadCatalog } from './lib/catalog.mjs';
 import { AppError, asAppError, errorPayload } from './lib/errors.mjs';
 import { LeaseManager } from './lib/lease.mjs';
-import { SerialJobQueue } from './lib/queue.mjs';
+import { CUSTOM_FORMAT_ID, orientFormat, resolveCustomFormat } from './lib/outputformat.mjs';
+import { commitJobResult, SerialJobQueue } from './lib/queue.mjs';
 import { buildGeneratePrompt, buildProfilePrompt, buildPromptProfilePrompt, runCodexTask } from './lib/runner.mjs';
+import { syncStylePreview } from './lib/stylepreview.mjs';
 
 const WEB_DIR = path.dirname(fileURLToPath(import.meta.url));
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.heic']);
@@ -36,7 +39,7 @@ async function readJson(request) {
   }
 }
 
-function contentType(filePath) {
+export function contentType(filePath) {
   return ({
     '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
     '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.png': 'image/png',
@@ -44,9 +47,13 @@ function contentType(filePath) {
   })[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream';
 }
 
+export function resolveStyleSelectionPath(pathname) {
+  return pathname === '/style-selection.mjs' ? path.join(WEB_DIR, 'style-selection.mjs') : null;
+}
+
 async function serveFile(response, filePath) {
   try {
-    const data = await readFile(filePath);
+    const data = await readServableFile(filePath);
     response.writeHead(200, { 'content-type': contentType(filePath), 'content-length': data.length, 'cache-control': 'no-store' });
     response.end(data);
   } catch {
@@ -54,9 +61,163 @@ async function serveFile(response, filePath) {
   }
 }
 
+export async function readServableFile(filePath) {
+  try {
+    const stats = await lstat(filePath);
+    if (!stats.isFile()) {
+      throw new AppError('NOT_FOUND', '资源不存在', 404);
+    }
+    return await readFile(filePath);
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    throw new AppError('NOT_FOUND', '资源不存在', 404);
+  }
+}
+
+export function safeDecodePathSegment(segment, { code = 'NOT_FOUND', message = '资源不存在', status = 404 } = {}) {
+  try {
+    return decodeURIComponent(segment);
+  } catch (error) {
+    if (error instanceof URIError) {
+      throw new AppError(code, message, status);
+    }
+    throw error;
+  }
+}
+
+function throwIfAborted(signal) {
+  if (signal?.aborted) {
+    throw signal.reason ?? new AppError('JOB_CANCELLED', '任务已取消', 499);
+  }
+}
+
+async function assertReadableFile(filePath, message) {
+  try {
+    await access(filePath, constants.R_OK);
+    const stats = await lstat(filePath);
+    if (!stats.isFile()) throw new Error('not a regular file');
+  } catch {
+    throw new AppError('OUTPUT_MISSING', message, 500);
+  }
+}
+
+function sanitizeProfileResult({ profileId, outputUrl, outputUrls }) {
+  return { profileId, outputUrl, outputUrls };
+}
+
+function sanitizeGenerateResult({ styleId, outputUrl, outputUrls, preview }) {
+  return {
+    styleId,
+    outputUrl,
+    outputUrls,
+    ...(preview === undefined ? {} : { preview }),
+  };
+}
+
+export function buildGenerateBatchDefinitions({
+  rootDir,
+  profileIds,
+  styleIds,
+  format,
+  orientation,
+  extraPrompt,
+  quantity,
+  buildGeneratePromptImpl = buildGeneratePrompt,
+}) {
+  return styleIds.map((styleId, batchIndex) => {
+    const id = randomUUID();
+    const baseName = `${profileIds.join('+')}-${styleId}-${id.slice(0, 8)}`;
+    const fileNames = Array.from({ length: quantity }, (_, index) => `${baseName}-${index + 1}.png`);
+    const outputPaths = fileNames.map((fileName) => path.join(rootDir, 'output', fileName));
+    const outputUrls = fileNames.map((fileName) => `/media/output/${fileName}`);
+    const prompt = buildGeneratePromptImpl({
+      rootDir,
+      profileIds,
+      styleId,
+      format,
+      orientation,
+      extraPrompt,
+      quantity,
+      outputPaths,
+    });
+    return {
+      id,
+      type: 'generate',
+      styleId,
+      batchIndex,
+      batchSize: styleIds.length,
+      payload: { prompt, outputPaths, outputUrls },
+    };
+  });
+}
+
+export function createProfileJobDefinition({
+  rootDir,
+  jobId = randomUUID(),
+  profileId,
+  kind,
+  inputId,
+  imagePaths,
+  description,
+  buildProfilePromptImpl = buildProfilePrompt,
+  buildPromptProfilePromptImpl = buildPromptProfilePrompt,
+}) {
+  const safeProfileId = assertSafeId(profileId, '人物');
+  const controlDir = path.join(rootDir, '.control');
+  const profileStagingPath = path.join(controlDir, `profile-${jobId}.png`);
+  const profileFinalPath = path.join(rootDir, 'profiles', safeProfileId, 'multiview_reference.png');
+  const prompt = kind === 'input'
+    ? buildProfilePromptImpl({ rootDir, inputId, imagePaths, outputPath: profileStagingPath })
+    : buildPromptProfilePromptImpl({ rootDir, profileId: safeProfileId, description, outputPath: profileStagingPath });
+  return {
+    id: jobId,
+    type: 'profile',
+    payload: {
+      prompt,
+      profileId: safeProfileId,
+      profileFinalPath,
+      profileStagingPath,
+      outputUrl: `/media/profiles/${encodeURIComponent(safeProfileId)}/multiview_reference.png`,
+    },
+  };
+}
+
+export async function resolveMediaPath({
+  rootDir,
+  pathname,
+  loadCatalogImpl = loadCatalog,
+}) {
+  let parts;
+  try {
+    parts = pathname.split('/').filter(Boolean).map(decodeURIComponent);
+  } catch (error) {
+    if (error instanceof URIError) return null;
+    throw error;
+  }
+  const catalog = await loadCatalogImpl(rootDir);
+  if (parts[1] === 'profiles' && parts.length === 4 && parts[3] === 'multiview_reference.png') {
+    const profile = catalog.profiles.find((item) => item.id === parts[2]);
+    return profile ? path.join(rootDir, 'profiles', profile.id, 'multiview_reference.png') : null;
+  }
+  if (parts[1] === 'style-previews' && parts.length === 3) {
+    const match = /^(.+)\.jpg$/u.exec(parts[2]);
+    if (!match) return null;
+    const style = catalog.styles.find((item) => item.id === match[1]);
+    const expectedUrl = style ? `/media/style-previews/${encodeURIComponent(style.id)}.jpg` : null;
+    if (!style || !style.previewUrl || style.previewUrl !== expectedUrl || pathname !== expectedUrl) return null;
+    return path.join(rootDir, 'styles', 'previews', `${style.id}.jpg`);
+  }
+  if (parts[1] === 'output' && parts.length === 3 && path.basename(parts[2]) === parts[2] && IMAGE_EXTENSIONS.has(path.extname(parts[2]).toLowerCase())) {
+    return path.join(rootDir, 'output', parts[2]);
+  }
+  return null;
+}
+
 export function createControlServer({
   rootDir,
   runTaskImpl = runCodexTask,
+  syncStylePreviewImpl = syncStylePreview,
+  beforeProfileCommitImpl = async () => {},
   openImpl = (command, args) => {
     const child = spawn(command, args, { stdio: 'ignore', detached: true });
     child.unref();
@@ -84,58 +245,77 @@ export function createControlServer({
         if (job.payload.profileStagingPath) await unlink(job.payload.profileStagingPath).catch(() => {});
         throw error;
       }
-      if (job.payload.profileManifestPath) {
-        let manifest;
+      if (job.type === 'profile') {
         try {
-          manifest = JSON.parse(await readFile(job.payload.profileManifestPath, 'utf8'));
-        } catch {
-          await unlink(job.payload.profileStagingPath).catch(() => {});
-          throw new AppError('PROFILE_NAME_RESULT_MISSING', '任务完成但没有返回有效人物名称', 500);
-        } finally {
-          await unlink(job.payload.profileManifestPath).catch(() => {});
-        }
-        let profileId;
-        try {
-          profileId = assertSafeId(manifest?.profileId, '人物');
+          let profileId = job.payload.profileId;
+          if (job.payload.profileManifestPath) {
+            let manifest;
+            try {
+              manifest = JSON.parse(await readFile(job.payload.profileManifestPath, 'utf8'));
+            } catch {
+              throw new AppError('PROFILE_NAME_RESULT_MISSING', '任务完成但没有返回有效人物名称', 500);
+            } finally {
+              await unlink(job.payload.profileManifestPath).catch(() => {});
+            }
+            profileId = assertSafeId(manifest?.profileId, '人物');
+            if (job.payload.existingProfileIds.includes(profileId)) {
+              throw new AppError('PROFILE_NAME_CONFLICT', 'AI 生成的人物名称与现有人物冲突', 409);
+            }
+          } else {
+            profileId = assertSafeId(profileId, '人物');
+          }
+          const outputPath = job.payload.profileFinalPath ?? path.join(rootDir, 'profiles', profileId, 'multiview_reference.png');
+          await assertReadableFile(job.payload.profileStagingPath, '任务完成但没有找到人物多视图图片');
+          if (job.payload.profileManifestPath) {
+            try {
+              await access(outputPath);
+              throw new AppError('PROFILE_NAME_CONFLICT', 'AI 生成的人物名称与现有人物冲突', 409);
+            } catch (error) {
+              if (error instanceof AppError) throw error;
+              if (error.code !== 'ENOENT') throw error;
+            }
+          }
+          await beforeProfileCommitImpl({
+            job,
+            signal,
+            profileId,
+            outputPath,
+            profileStagingPath: job.payload.profileStagingPath,
+          });
+          throwIfAborted(signal);
+          await mkdir(path.dirname(outputPath), { recursive: true });
+          throwIfAborted(signal);
+          await rename(job.payload.profileStagingPath, outputPath);
+          const outputUrl = `/media/profiles/${encodeURIComponent(profileId)}/multiview_reference.png`;
+          return commitJobResult(sanitizeProfileResult({ profileId, outputUrl, outputUrls: [outputUrl] }));
         } catch (error) {
           await unlink(job.payload.profileStagingPath).catch(() => {});
+          if (job.payload.profileManifestPath) await unlink(job.payload.profileManifestPath).catch(() => {});
           throw error;
         }
-        if (job.payload.existingProfileIds.includes(profileId)) {
-          await unlink(job.payload.profileStagingPath).catch(() => {});
-          throw new AppError('PROFILE_NAME_CONFLICT', 'AI 生成的人物名称与现有人物冲突', 409);
-        }
-        const outputPath = path.join(rootDir, 'profiles', profileId, 'multiview_reference.png');
-        try {
-          await access(job.payload.profileStagingPath);
-        } catch {
-          throw new AppError('OUTPUT_MISSING', '任务完成但没有找到人物多视图图片', 500);
-        }
-        try {
-          await access(outputPath);
-          await unlink(job.payload.profileStagingPath).catch(() => {});
-          throw new AppError('PROFILE_NAME_CONFLICT', 'AI 生成的人物名称与现有人物冲突', 409);
-        } catch (error) {
-          if (error instanceof AppError) throw error;
-          if (error.code !== 'ENOENT') throw error;
-        }
-        await mkdir(path.dirname(outputPath), { recursive: true });
-        await rename(job.payload.profileStagingPath, outputPath);
-        const outputUrl = `/media/profiles/${encodeURIComponent(profileId)}/multiview_reference.png`;
-        return { ...result, profileId, outputUrl, outputUrls: [outputUrl] };
       }
       const outputPaths = job.payload.outputPaths ?? [job.payload.outputPath];
-      if (runTaskImpl === runCodexTask) {
-        for (const outputPath of outputPaths) {
-          try {
-            await access(outputPath);
-          } catch {
-            throw new AppError('OUTPUT_MISSING', '任务完成但没有找到全部输出图片', 500);
-          }
-        }
+      for (const outputPath of outputPaths) {
+        await assertReadableFile(outputPath, '任务完成但没有找到全部输出图片');
       }
       const outputUrls = job.payload.outputUrls ?? [job.payload.outputUrl];
-      return { ...result, outputUrl: outputUrls[0], outputUrls };
+      const generatedAt = new Date(now()).toISOString();
+      let preview;
+      if (job.type === 'generate' && job.styleId) {
+        throwIfAborted(signal);
+        const synced = await syncStylePreviewImpl({
+          rootDir,
+          styleId: job.styleId,
+          outputPaths,
+          jobId: job.id,
+          generatedAt,
+          signal,
+        });
+        preview = synced?.preview;
+      }
+      return job.type === 'generate'
+        ? commitJobResult(sanitizeGenerateResult({ styleId: job.styleId, outputUrl: outputUrls[0], outputUrls, preview }))
+        : sanitizeGenerateResult({ styleId: job.styleId, outputUrl: outputUrls[0], outputUrls, preview });
     },
   });
 
@@ -158,20 +338,7 @@ export function createControlServer({
   }
 
   async function mediaPath(pathname) {
-    const parts = pathname.split('/').filter(Boolean).map(decodeURIComponent);
-    const catalog = await loadCatalog(rootDir);
-    if (parts[1] === 'profiles' && parts.length === 4 && parts[3] === 'multiview_reference.png') {
-      const profile = catalog.profiles.find((item) => item.id === parts[2]);
-      return profile ? path.join(rootDir, 'profiles', profile.id, 'multiview_reference.png') : null;
-    }
-    if (parts[1] === 'styles' && parts.length === 3) {
-      const style = catalog.styles.find((item) => decodeURIComponent(item.thumbnailUrl.split('/').at(-1)) === parts[2]);
-      return style ? path.join(rootDir, 'styles', parts[2]) : null;
-    }
-    if (parts[1] === 'output' && parts.length === 3 && path.basename(parts[2]) === parts[2] && IMAGE_EXTENSIONS.has(path.extname(parts[2]).toLowerCase())) {
-      return path.join(rootDir, 'output', parts[2]);
-    }
-    return null;
+    return resolveMediaPath({ rootDir, pathname });
   }
 
   async function handle(request, response) {
@@ -225,6 +392,17 @@ export function createControlServer({
         throw new AppError('PROFILES_INVALID', '至少选择一个人物，最多选择 10 人', 400);
       }
       const profileIds = [...new Set(body.profileIds.map((profileId) => assertSafeId(profileId, '人物')))];
+      if (!Array.isArray(body.styleIds) || body.styleIds.length < 1) {
+        throw new AppError('STYLES_INVALID', '至少选择一个风格', 400);
+      }
+      const styleIds = [];
+      const seenStyleIds = new Set();
+      for (const styleId of body.styleIds) {
+        const safeStyleId = assertSafeId(styleId, '风格');
+        if (seenStyleIds.has(safeStyleId)) continue;
+        seenStyleIds.add(safeStyleId);
+        styleIds.push(safeStyleId);
+      }
       if (!Number.isInteger(body.quantity) || body.quantity < 1 || body.quantity > 20) {
         throw new AppError('QUANTITY_INVALID', '生成数量必须是 1 到 20 的整数', 400);
       }
@@ -232,28 +410,35 @@ export function createControlServer({
       if (!['portrait', 'landscape'].includes(orientation)) {
         throw new AppError('ORIENTATION_INVALID', '照片方向必须是纵向或横向', 400);
       }
-      assertSafeId(body.styleId, '风格');
       if (typeof body.extraPrompt !== 'string' || body.extraPrompt.length > 4_000) throw new AppError('PROMPT_INVALID', '额外要求最多 4000 字', 400);
+      const formatId = typeof body.formatId === 'string' ? body.formatId.trim() : '';
       const catalog = await loadCatalog(rootDir);
       const profiles = profileIds.map((profileId) => catalog.profiles.find((item) => item.id === profileId));
-      const style = catalog.styles.find((item) => item.id === body.styleId);
-      const format = catalog.formats.find((item) => item.id === body.formatId);
-      if (profiles.some((profile) => !profile) || !style || !format) throw new AppError('SELECTION_INVALID', '人物、风格或输出格式不可用', 422);
-      const shortEdge = Math.min(format.width, format.height);
-      const longEdge = Math.max(format.width, format.height);
-      const orientedFormat = {
-        ...format,
-        width: orientation === 'landscape' ? longEdge : shortEdge,
-        height: orientation === 'landscape' ? shortEdge : longEdge,
-      };
-      const id = randomUUID();
-      const baseName = `${profileIds.join('+')}-${body.styleId}-${id.slice(0, 8)}`;
-      const fileNames = Array.from({ length: body.quantity }, (_, index) => `${baseName}-${index + 1}.png`);
-      const outputPaths = fileNames.map((fileName) => path.join(rootDir, 'output', fileName));
-      const outputUrls = fileNames.map((fileName) => `/media/output/${fileName}`);
+      const styles = styleIds.map((styleId) => catalog.styles.find((item) => item.id === styleId));
+      if (profiles.some((profile) => !profile) || styles.some((style) => !style)) {
+        throw new AppError('SELECTION_INVALID', '人物、风格或输出格式不可用', 422);
+      }
+      let format;
+      if (formatId === CUSTOM_FORMAT_ID) {
+        format = resolveCustomFormat(body.customFormat, orientation);
+      } else {
+        const preset = catalog.formats.find((item) => item.id === formatId);
+        if (!preset) throw new AppError('SELECTION_INVALID', '人物、风格或输出格式不可用', 422);
+        format = orientFormat(preset, orientation);
+      }
+      const batchId = randomUUID();
       await mkdir(path.join(rootDir, 'output'), { recursive: true });
-      const prompt = buildGeneratePrompt({ rootDir, profileIds, styleId: body.styleId, format: orientedFormat, orientation, extraPrompt: body.extraPrompt, quantity: body.quantity, outputPaths });
-      return sendJson(response, 202, queue.enqueue({ id, type: 'generate', payload: { prompt, outputPaths, outputUrls } }));
+      const jobDefinitions = buildGenerateBatchDefinitions({
+        rootDir,
+        profileIds,
+        styleIds,
+        format,
+        orientation,
+        extraPrompt: body.extraPrompt,
+        quantity: body.quantity,
+      });
+      const jobs = jobDefinitions.map((job) => queue.enqueue({ ...job, batchId }));
+      return sendJson(response, 202, { batchId, jobs });
     }
     if (request.method === 'POST' && pathname === '/api/jobs/profile') {
       requireOwner(request);
@@ -265,11 +450,9 @@ export function createControlServer({
       const names = await readdir(inputDir, { withFileTypes: true });
       const imagePaths = names.filter((entry) => entry.isFile() && IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase())).map((entry) => path.join(inputDir, entry.name)).sort();
       if (!imagePaths.length) throw new AppError('INPUT_IMAGES_MISSING', '人物输入目录没有可用图片', 422);
-      const id = randomUUID();
-      const outputPath = path.join(rootDir, 'profiles', body.inputId, 'multiview_reference.png');
-      await mkdir(path.dirname(outputPath), { recursive: true });
-      const prompt = buildProfilePrompt({ rootDir, inputId: body.inputId, imagePaths, outputPath });
-      return sendJson(response, 202, queue.enqueue({ id, type: 'profile', payload: { prompt, outputPath, outputUrl: `/media/profiles/${body.inputId}/multiview_reference.png` } }));
+      const job = createProfileJobDefinition({ rootDir, profileId: body.inputId, kind: 'input', inputId: body.inputId, imagePaths });
+      await mkdir(path.join(rootDir, '.control'), { recursive: true });
+      return sendJson(response, 202, queue.enqueue(job));
     }
     if (request.method === 'POST' && pathname === '/api/jobs/profile-prompt') {
       requireOwner(request);
@@ -285,12 +468,17 @@ export function createControlServer({
       const profileId = requestedName ? assertSafeId(requestedName, '人物') : '';
       const id = randomUUID();
       if (profileId) {
-        const outputPath = path.join(rootDir, 'profiles', profileId, 'multiview_reference.png');
-        await mkdir(path.dirname(outputPath), { recursive: true });
-        const prompt = buildPromptProfilePrompt({ profileId, description: body.description.trim(), outputPath });
+        await mkdir(path.join(rootDir, '.control'), { recursive: true });
+        const jobDefinition = createProfileJobDefinition({
+          rootDir,
+          jobId: id,
+          profileId,
+          kind: 'prompt',
+          description: body.description.trim(),
+        });
         reservedProfileIds.add(profileId);
         profileJobIds.set(id, profileId);
-        const job = queue.enqueue({ id, type: 'profile', payload: { prompt, outputPath, outputUrl: `/media/profiles/${encodeURIComponent(profileId)}/multiview_reference.png` } });
+        const job = queue.enqueue(jobDefinition);
         return sendJson(response, 202, { ...job, profileId });
       }
       const catalog = await loadCatalog(rootDir);
@@ -326,6 +514,17 @@ export function createControlServer({
       const cancelled = queue.cancel(cancelMatch[1]);
       return sendJson(response, cancelled ? 200 : 404, cancelled ? { cancelled: true } : errorPayload(new AppError('JOB_NOT_FOUND', '任务不存在或已结束', 404)));
     }
+    const cancelBatchMatch = request.method === 'DELETE' && /^\/api\/batches\/([^/]+)$/.exec(pathname);
+    if (cancelBatchMatch) {
+      requireOwner(request);
+      const batchId = safeDecodePathSegment(cancelBatchMatch[1], { code: 'BATCH_NOT_FOUND', message: '批次不存在或已结束', status: 404 });
+      const cancelled = queue.cancelBatch(batchId);
+      return sendJson(
+        response,
+        cancelled ? 200 : 404,
+        cancelled ? { cancelled } : errorPayload(new AppError('BATCH_NOT_FOUND', '批次不存在或已结束', 404)),
+      );
+    }
     if (request.method === 'POST' && pathname === '/api/open-output') {
       requireOwner(request);
       await readJson(request);
@@ -354,6 +553,8 @@ export function createControlServer({
     if (request.method === 'GET' && pathname === '/control.css') return serveFile(response, path.join(WEB_DIR, 'control.css'));
     if (request.method === 'GET' && pathname === '/control.js') return serveFile(response, path.join(WEB_DIR, 'control.js'));
     if (request.method === 'GET' && pathname === '/i18n.mjs') return serveFile(response, path.join(WEB_DIR, 'i18n.mjs'));
+    const styleSelectionPath = resolveStyleSelectionPath(pathname);
+    if (request.method === 'GET' && styleSelectionPath) return serveFile(response, styleSelectionPath);
     return sendJson(response, 404, errorPayload(new AppError('NOT_FOUND', '接口不存在', 404)));
   }
 

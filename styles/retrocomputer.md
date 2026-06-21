@@ -1,7 +1,6 @@
 ---
 style_id: retrocomputer
 name: 七十年代机房
-thumbnail: retrocomputer.png
 source_url: https://note.com/mayu_hiraizumi/n/n3318f4eabfc8
 source_title: ChatGPT等でGPT Image 2を利用する手順（プロンプト付）
 source_result: 26

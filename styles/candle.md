@@ -1,7 +1,6 @@
 ---
 style_id: candle
 name: 烛光侧室
-thumbnail: candle.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

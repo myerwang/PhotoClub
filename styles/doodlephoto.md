@@ -1,7 +1,6 @@
 ---
 style_id: doodlephoto
 name: 照片涂鸦
-thumbnail: doodlephoto.png
 source_url: https://gpt-image2.canghe.ai/
 source_title: GPT-Image2 Prompt Gallery
 source_result: 3

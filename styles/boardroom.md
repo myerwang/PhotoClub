@@ -1,7 +1,6 @@
 ---
 style_id: boardroom
 name: 会议纪实
-thumbnail: boardroom.png
 source_url: https://digirise.ai/chaen-ai-lab/gpt-image-2-prompt-guide/
 source_title: GPT Image 2 プロンプトの書き方｜実務7ユースケース
 source_result: 7
