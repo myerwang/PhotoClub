@@ -617,6 +617,73 @@ test('generation accepts ordered style batches, deduplicates duplicate style ids
   assert.doesNotMatch(prompts[0], /custom_/);
 });
 
+test('generation resume only queues missing outputs and reports skipped completed work', async (t) => {
+  const rootDir = await fixture();
+  await writeFile(path.join(rootDir, 'styles/neon.md'), '---\nstyle_id: neon\nname: 霓虹\n---\n\n- Apply `system/rules/style_base.md`.\n');
+  const runCounts = new Map();
+  const prompts = [];
+  const { app, base } = await running({
+    rootDir,
+    runTaskImpl: async ({ prompt }) => {
+      const styleId = /styles\/([^/]+)\.md/.exec(prompt)?.[1];
+      runCounts.set(styleId, (runCounts.get(styleId) ?? 0) + 1);
+      prompts.push({ styleId, prompt });
+      if (styleId === 'film' && runCounts.get(styleId) === 1) return {};
+      await writeGenerateOutputs(prompt);
+      return {};
+    },
+    syncStylePreviewImpl: async ({ styleId }) => ({ styleId, preview: `styles/previews/${styleId}.jpg` }),
+  });
+  t.after(() => app.close());
+  const owner = await acquire(base);
+
+  const createResponse = await fetch(`${base}/api/jobs/generate`, {
+    method: 'POST',
+    headers: auth(owner),
+    body: JSON.stringify({
+      profileIds: ['mama'],
+      styleIds: ['sticker', 'film', 'neon'],
+      formatId: 'jp_l',
+      extraPrompt: '',
+      quantity: 1,
+    }),
+  });
+  assert.equal(createResponse.status, 202);
+  const created = await createResponse.json();
+  await waitFor(() => app.queue.snapshot().jobs.every((job) => ['succeeded', 'failed'].includes(job.status)), 'expected initial batch to finish');
+  assert.deepEqual(app.queue.snapshot().jobs.map((job) => job.status), ['succeeded', 'failed', 'succeeded']);
+
+  const historyResponse = await fetch(`${base}/api/generation-history`);
+  assert.equal(historyResponse.status, 200);
+  const history = await historyResponse.json();
+  const batch = history.batches.find((item) => item.id === created.batchId);
+  assert.equal(batch.completed, 2);
+  assert.equal(batch.summary.pending, 1);
+  assert.equal(batch.summary.skippedCompleted, 2);
+  assert.equal(batch.summary.nextPending.styleIndex, 2);
+  assert.equal(batch.summary.nextPending.styleId, 'film');
+
+  const resumeResponse = await fetch(`${base}/api/generation-history/${encodeURIComponent(created.batchId)}/resume`, {
+    method: 'POST',
+    headers: auth(owner),
+    body: '{}',
+  });
+  assert.equal(resumeResponse.status, 202);
+  const resumed = await resumeResponse.json();
+  assert.equal(resumed.jobs.length, 1);
+  assert.equal(resumed.jobs[0].styleId, 'film');
+  assert.equal(resumed.jobs[0].batchIndex, 0);
+  assert.equal(resumed.jobs[0].batchSize, 1);
+  assert.equal(resumed.resume.pending, 1);
+  assert.equal(resumed.resume.skippedCompleted, 2);
+
+  await waitFor(() => app.queue.snapshot().jobs.filter((job) => job.batchId === created.batchId).at(-1)?.status === 'succeeded', 'expected resumed missing job to finish');
+  assert.equal(runCounts.get('sticker'), 1);
+  assert.equal(runCounts.get('film'), 2);
+  assert.equal(runCounts.get('neon'), 1);
+  assert.match(prompts.at(-1).prompt, /styles\/film\.md/);
+});
+
 test('generation rejects empty profiles and invalid quantity', async (t) => {
   const { app, base } = await running();
   t.after(() => app.close());

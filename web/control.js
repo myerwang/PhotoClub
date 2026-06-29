@@ -320,7 +320,18 @@ function renderHistory() {
     progress.className = 'history-progress';
     const usage = batch.usage?.totalTokens ? ` · ${batch.usage.totalTokens} tokens` : '';
     progress.textContent = `${batch.completed} / ${batch.total}${usage}`;
-    node.append(row, progress);
+    const details = document.createElement('div');
+    details.className = 'history-progress';
+    if (batch.summary?.pending) {
+      const next = batch.summary.nextPending;
+      details.textContent = t('history.resumeSummary', {
+        pending: batch.summary.pending,
+        skipped: batch.summary.skippedCompleted,
+        next: next?.styleIndex ?? next?.itemIndex ?? '-',
+        style: next?.styleId ?? '-',
+      });
+    }
+    node.append(row, progress, details);
     return node;
   });
   $('generation-history').replaceChildren(...(items.length ? items : [empty(t('history.empty'))]));
@@ -335,9 +346,9 @@ async function refreshHistory() {
 async function resumeBatch(batchId) {
   clearError();
   try {
-    const { jobs } = await api(`/api/generation-history/${encodeURIComponent(batchId)}/resume`, { method: 'POST', body: '{}' });
+    const { jobs, resume } = await api(`/api/generation-history/${encodeURIComponent(batchId)}/resume`, { method: 'POST', body: '{}' });
     state.job = null;
-    state.batch = createBatchState(batchId, jobs);
+    state.batch = createBatchState(batchId, jobs, resume);
     batchStatusMessage();
     await refreshHistory();
   } catch (error) { showError(error, 'suggestion.job'); }
@@ -382,7 +393,10 @@ function batchStatusMessage() {
   state.busy = true;
   $('loading-overlay').hidden = false;
   $('loading-status-text').textContent = `${label} ${progress}`.trim();
-  $('task-state').textContent = `${t('task.generate')}: ${t(`status.${job.status}`, {}, job.status)} (${progress})`;
+  const resumeInfo = batch.resume?.pending
+    ? ` · ${t('task.resumeRemaining', { pending: batch.resume.pending, skipped: batch.resume.skippedCompleted })}`
+    : '';
+  $('task-state').textContent = `${t('task.generate')}: ${t(`status.${job.status}`, {}, job.status)} (${progress})${resumeInfo}`;
   renderLock();
 }
 
@@ -412,7 +426,7 @@ function renderSummary() {
   $('selection-summary').textContent = `${people} / ${styleSummary} / ${orientation}`;
 }
 
-function createBatchState(batchId, jobs) {
+function createBatchState(batchId, jobs, resume = null) {
   return {
     id: batchId,
     jobIds: jobs.map((job) => job.id),
@@ -422,6 +436,7 @@ function createBatchState(batchId, jobs) {
     cancelRequested: false,
     statuses: Object.fromEntries(jobs.map((job) => [job.id, job.status])),
     lastJob: jobs[0] ?? null,
+    resume,
   };
 }
 

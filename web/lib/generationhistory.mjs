@@ -32,6 +32,33 @@ async function writeUnsafe(rootDir, history) {
 
 export async function readGenerationHistory(rootDir) { return withLock(rootDir, () => readUnsafe(rootDir)); }
 
+export function summarizeGenerationBatch(batch) {
+  const items = Array.isArray(batch?.items) ? batch.items : [];
+  const completed = items.filter((item) => item.status === 'completed').length;
+  const pendingItems = items
+    .map((item, itemIndex) => ({ item, itemIndex }))
+    .filter(({ item }) => item.status !== 'completed');
+  const next = pendingItems[0];
+  const styleIndex = next
+    ? (Array.isArray(batch.styles) ? batch.styles.findIndex((style) => style.id === next.item.styleId) : -1)
+    : -1;
+  return {
+    completed,
+    pending: pendingItems.length,
+    skippedCompleted: completed,
+    nextPending: next ? {
+      itemIndex: next.itemIndex + 1,
+      styleIndex: styleIndex >= 0 ? styleIndex + 1 : null,
+      styleId: next.item.styleId,
+      outputPath: next.item.outputPath,
+    } : null,
+  };
+}
+
+export function enrichGenerationBatch(batch) {
+  return { ...batch, summary: summarizeGenerationBatch(batch) };
+}
+
 export async function createGenerationBatch(rootDir, batch) {
   return withLock(rootDir, async () => {
     const history = await readUnsafe(rootDir);

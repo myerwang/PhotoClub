@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { createGenerationBatch, readGenerationHistory, reconcileGenerationBatch, updateGenerationBatch } from '../lib/generationhistory.mjs';
+import { createGenerationBatch, readGenerationHistory, reconcileGenerationBatch, summarizeGenerationBatch, updateGenerationBatch } from '../lib/generationhistory.mjs';
 
 test('persists batches and reconciles completed output files after restart', async () => {
   const rootDir = await mkdtemp(path.join(os.tmpdir(), 'photo-history-'));
@@ -19,6 +19,17 @@ test('persists batches and reconciles completed output files after restart', asy
   assert.equal(batch.completed, 1);
   assert.equal(batch.status, 'interrupted');
   assert.deepEqual(batch.items.map((item) => item.status), ['completed', 'pending']);
+  assert.deepEqual(summarizeGenerationBatch(batch), {
+    completed: 1,
+    pending: 1,
+    skippedCompleted: 1,
+    nextPending: {
+      itemIndex: 2,
+      styleIndex: null,
+      styleId: undefined,
+      outputPath: path.join(rootDir, 'output', 'two.png'),
+    },
+  });
 
   await updateGenerationBatch(rootDir, 'batch1', (current) => ({ ...current, status: 'paused_quota' }));
   const history = await readGenerationHistory(rootDir);

@@ -14,7 +14,7 @@ import { buildGeneratePrompt, buildProfilePrompt, buildPromptProfilePrompt, buil
 import { syncStylePreview } from './lib/stylepreview.mjs';
 import { openTarget } from './lib/platform.mjs';
 import { publishStyleDraft } from './lib/styleplugin.mjs';
-import { createGenerationBatch, readGenerationHistory, reconcileGenerationBatch, updateGenerationBatch } from './lib/generationhistory.mjs';
+import { createGenerationBatch, enrichGenerationBatch, readGenerationHistory, reconcileGenerationBatch, summarizeGenerationBatch, updateGenerationBatch } from './lib/generationhistory.mjs';
 
 const WEB_DIR = path.dirname(fileURLToPath(import.meta.url));
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.heic']);
@@ -422,7 +422,8 @@ export function createControlServer({
     if (request.method === 'GET' && pathname === '/api/generation-history') {
       const history = await readGenerationHistory(rootDir);
       for (const batch of history.batches.filter((item) => item.status === 'running')) await reconcileGenerationBatch(rootDir, batch.id);
-      return sendJson(response, 200, await readGenerationHistory(rootDir));
+      const fresh = await readGenerationHistory(rootDir);
+      return sendJson(response, 200, { ...fresh, batches: fresh.batches.map(enrichGenerationBatch) });
     }
     if (request.method === 'GET' && pathname === '/api/events') {
       response.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache', connection: 'keep-alive' });
@@ -518,23 +519,27 @@ export function createControlServer({
       for (const style of batch.styles) {
         if (!catalog.styles.some((item) => item.id === style.id && item.fingerprint === style.fingerprint)) throw new AppError('RESUME_INPUT_CHANGED', '风格已变化或不存在', 409);
       }
-      const definitions = batch.styles.flatMap((style, batchIndex) => {
+      const definitions = [];
+      for (const style of batch.styles) {
         const items = batch.items.filter((item) => item.styleId === style.id && item.status !== 'completed');
-        if (!items.length) return [];
+        if (!items.length) continue;
         const id = randomUUID();
-        return [{
-          id, type: 'generate', styleId: style.id, batchIndex, batchSize: batch.styles.length,
+        definitions.push({
+          id, type: 'generate', styleId: style.id, batchIndex: definitions.length, batchSize: 0,
           payload: {
             outputPaths: items.map((item) => item.outputPath),
             outputUrls: items.map((item) => item.outputUrl),
             styleFingerprint: style.fingerprint,
             prompt: buildGeneratePrompt({ rootDir, profileIds: batch.profileIds, styleId: style.id, format: batch.format, orientation: batch.orientation, extraPrompt: batch.extraPrompt, quantity: items.length, outputPaths: items.map((item) => item.outputPath) }),
           },
-        }];
-      });
+        });
+      }
+      for (const definition of definitions) definition.batchSize = definitions.length;
+      if (!definitions.length) throw new AppError('BATCH_ALREADY_COMPLETE', '该生成记录没有需要继续的缺失输出', 409);
+      const summary = summarizeGenerationBatch(batch);
       await updateGenerationBatch(rootDir, batchId, (currentBatch) => ({ ...currentBatch, status: 'running', error: null }));
       const jobs = definitions.map((job) => queue.enqueue({ ...job, batchId }));
-      return sendJson(response, 202, { batchId, jobs });
+      return sendJson(response, 202, { batchId, jobs, resume: { ...summary, jobCount: jobs.length } });
     }
     if (request.method === 'POST' && pathname === '/api/jobs/style') {
       requireOwner(request);
