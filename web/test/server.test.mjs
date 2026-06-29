@@ -1198,6 +1198,54 @@ test('authenticated batch cancel only cancels matching batch jobs and leaves lat
   assert.equal(typeof releaseFirst, 'function');
 });
 
+test('cancelled generation batches with pending outputs can be resumed', async (t) => {
+  let releaseFirst;
+  const { app, base } = await running({
+    runTaskImpl: async ({ prompt, signal }) => new Promise((resolve, reject) => {
+      releaseFirst = async () => {
+        await writeGenerateOutputs(prompt);
+        resolve({});
+      };
+      signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+    }),
+    syncStylePreviewImpl: async ({ styleId }) => ({ styleId, preview: `styles/previews/${styleId}.jpg` }),
+  });
+  t.after(() => app.close());
+  const owner = await acquire(base);
+  const createResponse = await fetch(`${base}/api/jobs/generate`, {
+    method: 'POST',
+    headers: auth(owner),
+    body: JSON.stringify({
+      profileIds: ['mama'],
+      styleIds: ['sticker', 'film'],
+      formatId: 'jp_l',
+      extraPrompt: '',
+      quantity: 1,
+    }),
+  });
+  assert.equal(createResponse.status, 202);
+  const created = await createResponse.json();
+  const cancelResponse = await fetch(`${base}/api/batches/${created.batchId}`, {
+    method: 'DELETE',
+    headers: auth(owner),
+  });
+  assert.equal(cancelResponse.status, 200);
+  await waitFor(() => app.queue.snapshot().jobs.every((job) => job.status === 'cancelled'), 'expected cancelled batch jobs');
+
+  const resumeResponse = await fetch(`${base}/api/generation-history/${encodeURIComponent(created.batchId)}/resume`, {
+    method: 'POST',
+    headers: auth(owner),
+    body: '{}',
+  });
+  assert.equal(resumeResponse.status, 202);
+  const resumed = await resumeResponse.json();
+  assert.equal(resumed.batch.completed, 0);
+  assert.equal(resumed.batch.total, 2);
+  assert.equal(resumed.resume.pending, 2);
+  assert.equal(resumed.jobs.length, 2);
+  assert.equal(typeof releaseFirst, 'function');
+});
+
 test('open-output cannot accept a caller supplied path', async (t) => {
   const calls = [];
   const { app, base, rootDir } = await running({ openImpl: (target) => calls.push(target) });

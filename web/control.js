@@ -308,7 +308,7 @@ function renderHistory() {
     const label = document.createElement('strong');
     label.textContent = `${new Date(batch.createdAt).toLocaleString(LANGUAGE_LOCALES[state.language])} · ${t(`history.status.${batch.status}`, {}, batch.status)}`;
     row.append(label);
-    if (['paused_quota', 'interrupted', 'failed'].includes(batch.status) && batch.summary?.pending > 0) {
+    if (['paused_quota', 'interrupted', 'failed', 'cancelled'].includes(batch.status) && batch.summary?.pending > 0) {
       const resume = document.createElement('button');
       resume.type = 'button';
       resume.className = 'compact-button';
@@ -348,22 +348,28 @@ async function refreshHistory() {
 async function resumeBatch(batchId) {
   clearError();
   try {
-    const { jobs, resume } = await api(`/api/generation-history/${encodeURIComponent(batchId)}/resume`, { method: 'POST', body: '{}' });
+    const { jobs, resume, batch } = await api(`/api/generation-history/${encodeURIComponent(batchId)}/resume`, { method: 'POST', body: '{}' });
     state.job = null;
-    state.batch = createBatchState(batchId, jobs, resume);
+    state.batch = createBatchState(batchId, jobs, resume, batch);
     batchStatusMessage();
     await refreshHistory();
   } catch (error) { showError(error, 'suggestion.job'); }
+}
+
+function batchProgress() {
+  const batch = state.batch;
+  const total = batch?.total ?? batch?.jobIds.length ?? 0;
+  const completed = Math.min(total, (batch?.completed ?? 0) + (batch?.completedOutputs ?? 0));
+  return t('loading.batchProgress', { current: completed, total });
 }
 
 function batchStatusMessage() {
   const batch = state.batch;
   if (!batch) return;
 
-  const total = batch.jobIds.length;
   const terminalCount = batch.terminalIds.length;
   const statuses = batch.jobIds.map((id) => batch.statuses[id]).filter(Boolean);
-  const allTerminal = total > 0 && terminalCount === total;
+  const allTerminal = batch.jobIds.length > 0 && terminalCount === batch.jobIds.length;
 
   $('loading-title').textContent = t('loading.generate');
 
@@ -383,10 +389,8 @@ function batchStatusMessage() {
     return;
   }
 
-  const job = batch.lastJob ?? { status: 'queued', batchIndex: 0, batchSize: total };
-  const progress = isTerminalStatus(job.status)
-    ? t('loading.batchProgress', { current: terminalCount, total })
-    : t('loading.batchProgress', { current: (job.batchIndex ?? 0) + 1, total: job.batchSize ?? total });
+  const job = batch.lastJob ?? { status: 'queued' };
+  const progress = batchProgress();
   const statusKey = isTerminalStatus(job.status)
     ? `status.${job.status}`
     : job.status === 'running' ? 'loading.running' : 'loading.queued';
@@ -428,7 +432,7 @@ function renderSummary() {
   $('selection-summary').textContent = `${people} / ${styleSummary} / ${orientation}`;
 }
 
-function createBatchState(batchId, jobs, resume = null) {
+function createBatchState(batchId, jobs, resume = null, batchProgressState = null) {
   return {
     id: batchId,
     jobIds: jobs.map((job) => job.id),
@@ -439,6 +443,9 @@ function createBatchState(batchId, jobs, resume = null) {
     statuses: Object.fromEntries(jobs.map((job) => [job.id, job.status])),
     lastJob: jobs[0] ?? null,
     resume,
+    completed: batchProgressState?.completed ?? resume?.completed ?? 0,
+    total: batchProgressState?.total ?? resume?.total ?? jobs.length,
+    completedOutputs: 0,
   };
 }
 
@@ -489,7 +496,9 @@ function handleBatchJob(job) {
     if (state.batch.terminalIds.includes(job.id)) return;
     state.batch.terminalIds.push(job.id);
     if (job.status === 'succeeded') {
-      appendBatchResults(job.result?.outputUrls ?? (job.result?.outputUrl ? [job.result.outputUrl] : []));
+      const outputUrls = job.result?.outputUrls ?? (job.result?.outputUrl ? [job.result.outputUrl] : []);
+      state.batch.completedOutputs += outputUrls.length || 1;
+      appendBatchResults(outputUrls);
       refreshCatalog().catch(showError);
     } else if (job.status === 'failed') {
       if (job.styleId && !state.batch.failedStyleIds.includes(job.styleId)) {
@@ -634,9 +643,9 @@ async function submitGenerate() {
     $('loading-status-text').textContent = t('loading.preparing');
     $('task-state').textContent = `${t('task.generate')}: ${t('loading.preparing')}`;
     renderLock();
-    const { batchId, jobs } = await api('/api/jobs/generate', { method: 'POST', body: JSON.stringify(payload) });
+    const { batchId, jobs, batch } = await api('/api/jobs/generate', { method: 'POST', body: JSON.stringify(payload) });
     state.submitting = false;
-    state.batch = createBatchState(batchId, jobs);
+    state.batch = createBatchState(batchId, jobs, null, batch);
     batchStatusMessage();
     await reconcileBatchJobs();
   } catch (error) {

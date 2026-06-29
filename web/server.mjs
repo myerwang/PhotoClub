@@ -516,7 +516,7 @@ export function createControlServer({
         }))),
       });
       const jobs = jobDefinitions.map((job) => queue.enqueue({ ...job, batchId }));
-      return sendJson(response, 202, { batchId, jobs });
+      return sendJson(response, 202, { batchId, jobs, batch: { completed: 0, total: jobDefinitions.reduce((sum, job) => sum + job.payload.outputPaths.length, 0) } });
     }
     const resumeMatch = request.method === 'POST' && /^\/api\/generation-history\/([^/]+)\/resume$/u.exec(pathname);
     if (resumeMatch) {
@@ -550,7 +550,7 @@ export function createControlServer({
       const summary = summarizeGenerationBatch(batch);
       await updateGenerationBatch(rootDir, batchId, (currentBatch) => ({ ...currentBatch, status: 'running', error: null }));
       const jobs = definitions.map((job) => queue.enqueue({ ...job, batchId }));
-      return sendJson(response, 202, { batchId, jobs, resume: { ...summary, jobCount: jobs.length } });
+      return sendJson(response, 202, { batchId, jobs, resume: { ...summary, total: batch.total, jobCount: jobs.length }, batch: { completed: summary.completed, total: batch.total } });
     }
     if (request.method === 'POST' && pathname === '/api/jobs/style') {
       requireOwner(request);

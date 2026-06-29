@@ -29,3 +29,11 @@ test('desktop columns default to 2:4:2 and separators hide responsively', async 
   assert.match(css, /--output-track:\s*2fr/);
   assert.match(css, /@media \(max-width: 1100px\)[\s\S]*?\.column-separator\s*\{[^}]*display:\s*none/);
 });
+
+test('resume progress uses whole batch totals instead of resumed job count', async () => {
+  const script = await readFile(path.resolve('web/control.js'), 'utf8');
+  assert.match(script, /batchProgress\(\)/);
+  assert.match(script, /batch\.total/);
+  assert.match(script, /batch\.completed/);
+  assert.doesNotMatch(script, /t\('loading\.batchProgress', \{ current: \(job\.batchIndex \?\? 0\) \+ 1, total: job\.batchSize \?\? total \}\)/);
+});
