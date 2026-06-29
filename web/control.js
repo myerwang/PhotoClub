@@ -308,7 +308,7 @@ function renderHistory() {
     const label = document.createElement('strong');
     label.textContent = `${new Date(batch.createdAt).toLocaleString(LANGUAGE_LOCALES[state.language])} · ${t(`history.status.${batch.status}`, {}, batch.status)}`;
     row.append(label);
-    if (['paused_quota', 'interrupted', 'failed'].includes(batch.status) && batch.completed < batch.total) {
+    if (['paused_quota', 'interrupted', 'failed'].includes(batch.status) && batch.summary?.pending > 0) {
       const resume = document.createElement('button');
       resume.type = 'button';
       resume.className = 'compact-button';
@@ -330,6 +330,8 @@ function renderHistory() {
         next: next?.styleIndex ?? next?.itemIndex ?? '-',
         style: next?.styleId ?? '-',
       });
+    } else if (batch.summary?.failed) {
+      details.textContent = t('history.failedSummary', { failed: batch.summary.failed });
     }
     node.append(row, progress, details);
     return node;

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { AppError } from '../lib/errors.mjs';
+import { updateGenerationBatch } from '../lib/generationhistory.mjs';
 import {
   buildGenerateBatchDefinitions,
   createControlServer,
@@ -628,7 +629,6 @@ test('generation resume only queues missing outputs and reports skipped complete
       const styleId = /styles\/([^/]+)\.md/.exec(prompt)?.[1];
       runCounts.set(styleId, (runCounts.get(styleId) ?? 0) + 1);
       prompts.push({ styleId, prompt });
-      if (styleId === 'film' && runCounts.get(styleId) === 1) return {};
       await writeGenerateOutputs(prompt);
       return {};
     },
@@ -650,8 +650,21 @@ test('generation resume only queues missing outputs and reports skipped complete
   });
   assert.equal(createResponse.status, 202);
   const created = await createResponse.json();
-  await waitFor(() => app.queue.snapshot().jobs.every((job) => ['succeeded', 'failed'].includes(job.status)), 'expected initial batch to finish');
-  assert.deepEqual(app.queue.snapshot().jobs.map((job) => job.status), ['succeeded', 'failed', 'succeeded']);
+  await waitFor(() => app.queue.snapshot().jobs.every((job) => job.status === 'succeeded'), 'expected initial batch to finish');
+  assert.deepEqual(app.queue.snapshot().jobs.map((job) => job.status), ['succeeded', 'succeeded', 'succeeded']);
+
+  const initialHistoryResponse = await fetch(`${base}/api/generation-history`);
+  assert.equal(initialHistoryResponse.status, 200);
+  const initialHistory = await initialHistoryResponse.json();
+  const initialBatch = initialHistory.batches.find((item) => item.id === created.batchId);
+  const filmItem = initialBatch.items.find((item) => item.styleId === 'film');
+  await rm(filmItem.outputPath, { force: true });
+  await updateGenerationBatch(rootDir, created.batchId, (batch) => ({
+    ...batch,
+    status: 'interrupted',
+    completed: 2,
+    items: batch.items.map((item) => item.styleId === 'film' ? { ...item, status: 'pending' } : item),
+  }));
 
   const historyResponse = await fetch(`${base}/api/generation-history`);
   assert.equal(historyResponse.status, 200);
@@ -682,6 +695,108 @@ test('generation resume only queues missing outputs and reports skipped complete
   assert.equal(runCounts.get('film'), 2);
   assert.equal(runCounts.get('neon'), 1);
   assert.match(prompts.at(-1).prompt, /styles\/film\.md/);
+});
+
+test('generation resume does not retry explicitly failed style outputs', async (t) => {
+  const rootDir = await fixture();
+  let runs = 0;
+  const { app, base } = await running({
+    rootDir,
+    runTaskImpl: async () => {
+      runs += 1;
+      return {};
+    },
+  });
+  t.after(() => app.close());
+  const owner = await acquire(base);
+
+  const createResponse = await fetch(`${base}/api/jobs/generate`, {
+    method: 'POST',
+    headers: auth(owner),
+    body: JSON.stringify({
+      profileIds: ['mama'],
+      styleIds: ['film'],
+      formatId: 'jp_l',
+      extraPrompt: '',
+      quantity: 1,
+    }),
+  });
+  assert.equal(createResponse.status, 202);
+  const created = await createResponse.json();
+  await waitFor(() => app.queue.snapshot().jobs[0]?.status === 'failed', 'expected failed generation job');
+
+  const historyResponse = await fetch(`${base}/api/generation-history`);
+  assert.equal(historyResponse.status, 200);
+  const history = await historyResponse.json();
+  const batch = history.batches.find((item) => item.id === created.batchId);
+  assert.equal(batch.completed, 0);
+  assert.equal(batch.summary.pending, 0);
+  assert.equal(batch.summary.failed, 1);
+
+  const resumeResponse = await fetch(`${base}/api/generation-history/${encodeURIComponent(created.batchId)}/resume`, {
+    method: 'POST',
+    headers: auth(owner),
+    body: '{}',
+  });
+  assert.equal(resumeResponse.status, 409);
+  assert.equal((await resumeResponse.json()).error.code, 'BATCH_ALREADY_COMPLETE');
+  assert.equal(runs, 1);
+});
+
+test('generation resume ignores changed failed styles when pending styles are still valid', async (t) => {
+  const rootDir = await fixture();
+  let runs = 0;
+  const { app, base } = await running({
+    rootDir,
+    runTaskImpl: async ({ prompt }) => {
+      runs += 1;
+      const styleId = /styles\/([^/]+)\.md/.exec(prompt)?.[1];
+      if (styleId === 'sticker') return {};
+      await writeGenerateOutputs(prompt);
+      return {};
+    },
+    syncStylePreviewImpl: async ({ styleId }) => ({ styleId, preview: `styles/previews/${styleId}.jpg` }),
+  });
+  t.after(() => app.close());
+  const owner = await acquire(base);
+
+  const createResponse = await fetch(`${base}/api/jobs/generate`, {
+    method: 'POST',
+    headers: auth(owner),
+    body: JSON.stringify({
+      profileIds: ['mama'],
+      styleIds: ['sticker', 'film'],
+      formatId: 'jp_l',
+      extraPrompt: '',
+      quantity: 1,
+    }),
+  });
+  assert.equal(createResponse.status, 202);
+  const created = await createResponse.json();
+  await waitFor(() => app.queue.snapshot().jobs.every((job) => ['succeeded', 'failed'].includes(job.status)), 'expected initial batch to finish');
+  const initialHistoryResponse = await fetch(`${base}/api/generation-history`);
+  assert.equal(initialHistoryResponse.status, 200);
+  const initialBatch = (await initialHistoryResponse.json()).batches.find((item) => item.id === created.batchId);
+  const filmItem = initialBatch.items.find((item) => item.styleId === 'film');
+  await rm(filmItem.outputPath, { force: true });
+  await updateGenerationBatch(rootDir, created.batchId, (batch) => ({
+    ...batch,
+    status: 'failed',
+    completed: 0,
+    items: batch.items.map((item) => item.styleId === 'film' ? { ...item, status: 'pending' } : item),
+  }));
+  await writeFile(path.join(rootDir, 'styles/sticker.md'), '---\nstyle_id: sticker\nname: 改过的贴纸\n---\n\nchanged failed style\n');
+
+  const resumeResponse = await fetch(`${base}/api/generation-history/${encodeURIComponent(created.batchId)}/resume`, {
+    method: 'POST',
+    headers: auth(owner),
+    body: '{}',
+  });
+  assert.equal(resumeResponse.status, 202);
+  const resumed = await resumeResponse.json();
+  assert.deepEqual(resumed.jobs.map((job) => job.styleId), ['film']);
+  await waitFor(() => app.queue.snapshot().jobs.at(-1)?.status === 'succeeded', 'expected pending valid style to resume');
+  assert.equal(runs, 3);
 });
 
 test('generation rejects empty profiles and invalid quantity', async (t) => {

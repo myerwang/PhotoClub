@@ -9,19 +9,21 @@ import { createGenerationBatch, readGenerationHistory, reconcileGenerationBatch,
 test('persists batches and reconciles completed output files after restart', async () => {
   const rootDir = await mkdtemp(path.join(os.tmpdir(), 'photo-history-'));
   const outputPath = path.join(rootDir, 'output', 'one.png');
-  await createGenerationBatch(rootDir, { id: 'batch1', status: 'running', total: 2, items: [
+  await createGenerationBatch(rootDir, { id: 'batch1', status: 'running', total: 3, items: [
     { id: 'one', outputPath, status: 'pending' },
     { id: 'two', outputPath: path.join(rootDir, 'output', 'two.png'), status: 'pending' },
+    { id: 'three', outputPath: path.join(rootDir, 'output', 'three.png'), status: 'failed', attempts: 1 },
   ] });
   await mkdir(path.dirname(outputPath), { recursive: true });
   await writeFile(outputPath, 'image');
   const batch = await reconcileGenerationBatch(rootDir, 'batch1');
   assert.equal(batch.completed, 1);
   assert.equal(batch.status, 'interrupted');
-  assert.deepEqual(batch.items.map((item) => item.status), ['completed', 'pending']);
+  assert.deepEqual(batch.items.map((item) => item.status), ['completed', 'pending', 'failed']);
   assert.deepEqual(summarizeGenerationBatch(batch), {
     completed: 1,
     pending: 1,
+    failed: 1,
     skippedCompleted: 1,
     nextPending: {
       itemIndex: 2,

@@ -35,9 +35,10 @@ export async function readGenerationHistory(rootDir) { return withLock(rootDir, 
 export function summarizeGenerationBatch(batch) {
   const items = Array.isArray(batch?.items) ? batch.items : [];
   const completed = items.filter((item) => item.status === 'completed').length;
+  const failed = items.filter((item) => item.status === 'failed').length;
   const pendingItems = items
     .map((item, itemIndex) => ({ item, itemIndex }))
-    .filter(({ item }) => item.status !== 'completed');
+    .filter(({ item }) => item.status === 'pending');
   const next = pendingItems[0];
   const styleIndex = next
     ? (Array.isArray(batch.styles) ? batch.styles.findIndex((style) => style.id === next.item.styleId) : -1)
@@ -45,6 +46,7 @@ export function summarizeGenerationBatch(batch) {
   return {
     completed,
     pending: pendingItems.length,
+    failed,
     skippedCompleted: completed,
     nextPending: next ? {
       itemIndex: next.itemIndex + 1,
@@ -82,6 +84,25 @@ export async function updateGenerationBatch(rootDir, batchId, update) {
   });
 }
 
+export async function markGenerationItemsFailed(rootDir, batchId, outputPaths, error) {
+  const failedPaths = new Set(outputPaths);
+  return updateGenerationBatch(rootDir, batchId, (batch) => ({
+    ...batch,
+    items: batch.items.map((item) => {
+      if (!failedPaths.has(item.outputPath) || item.status === 'completed') return item;
+      return {
+        ...item,
+        status: 'failed',
+        attempts: (item.attempts ?? 0) + 1,
+        error: {
+          code: error?.code ?? 'JOB_FAILED',
+          message: error?.message ?? '任务执行失败',
+        },
+      };
+    }),
+  }));
+}
+
 export async function reconcileGenerationBatch(rootDir, batchId) {
   return updateGenerationBatch(rootDir, batchId, (batch) => {
     const items = batch.items.map((item) => ({ ...item }));
@@ -90,12 +111,22 @@ export async function reconcileGenerationBatch(rootDir, batchId) {
     if (!batch) return null;
     const items = await Promise.all(batch.items.map(async (item) => {
       try { await access(item.outputPath); return { ...item, status: 'completed' }; }
-      catch { return { ...item, status: 'pending' }; }
+      catch { return item.status === 'failed' ? item : { ...item, status: 'pending' }; }
     }));
     const completed = items.filter((item) => item.status === 'completed').length;
+    const pending = items.filter((item) => item.status === 'pending').length;
+    const failed = items.filter((item) => item.status === 'failed').length;
     return updateGenerationBatch(rootDir, batchId, (current) => ({
       ...current, items, completed,
-      status: completed === current.total ? 'completed' : current.status === 'paused_quota' ? 'paused_quota' : 'interrupted',
+      status: completed === current.total
+        ? 'completed'
+        : failed > 0 && pending === 0
+          ? 'failed'
+          : current.status === 'paused_quota'
+            ? 'paused_quota'
+            : current.status === 'failed'
+              ? 'failed'
+              : 'interrupted',
     }));
   });
 }

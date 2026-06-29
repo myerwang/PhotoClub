@@ -14,7 +14,7 @@ import { buildGeneratePrompt, buildProfilePrompt, buildPromptProfilePrompt, buil
 import { syncStylePreview } from './lib/stylepreview.mjs';
 import { openTarget } from './lib/platform.mjs';
 import { publishStyleDraft } from './lib/styleplugin.mjs';
-import { createGenerationBatch, enrichGenerationBatch, readGenerationHistory, reconcileGenerationBatch, summarizeGenerationBatch, updateGenerationBatch } from './lib/generationhistory.mjs';
+import { createGenerationBatch, enrichGenerationBatch, markGenerationItemsFailed, readGenerationHistory, reconcileGenerationBatch, summarizeGenerationBatch, updateGenerationBatch } from './lib/generationhistory.mjs';
 
 const WEB_DIR = path.dirname(fileURLToPath(import.meta.url));
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.heic']);
@@ -249,6 +249,9 @@ export function createControlServer({
           await reconcileGenerationBatch(rootDir, job.batchId).catch(() => {});
           await updateGenerationBatch(rootDir, job.batchId, (batch) => ({ ...batch, status: 'paused_quota', error: { code: error.code, message: error.message } })).catch(() => {});
           queue.cancelWaitingBatch(job.batchId);
+        } else if (job.type === 'generate' && job.batchId) {
+          const outputPaths = job.payload.outputPaths ?? [job.payload.outputPath];
+          await markGenerationItemsFailed(rootDir, job.batchId, outputPaths, error).catch(() => {});
         }
         throw error;
       }
@@ -311,8 +314,15 @@ export function createControlServer({
         }
       }
       const outputPaths = job.payload.outputPaths ?? [job.payload.outputPath];
-      for (const outputPath of outputPaths) {
-        await assertReadableFile(outputPath, '任务完成但没有找到全部输出图片');
+      try {
+        for (const outputPath of outputPaths) {
+          await assertReadableFile(outputPath, '任务完成但没有找到全部输出图片');
+        }
+      } catch (error) {
+        if (job.type === 'generate' && job.batchId) {
+          await markGenerationItemsFailed(rootDir, job.batchId, outputPaths, error).catch(() => {});
+        }
+        throw error;
       }
       const outputUrls = job.payload.outputUrls ?? [job.payload.outputUrl];
       const generatedAt = new Date(now()).toISOString();
@@ -516,12 +526,13 @@ export function createControlServer({
       if (!batch || !['paused_quota', 'interrupted', 'failed'].includes(batch.status)) throw new AppError('BATCH_NOT_RESUMABLE', '该生成记录不可继续', 409);
       const catalog = await loadCatalog(rootDir);
       if (!batch.profileIds.every((id) => catalog.profiles.some((profile) => profile.id === id))) throw new AppError('RESUME_INPUT_CHANGED', '人物设定已变化或不存在', 409);
+      const pendingStyleIds = new Set(batch.items.filter((item) => item.status === 'pending').map((item) => item.styleId));
       for (const style of batch.styles) {
-        if (!catalog.styles.some((item) => item.id === style.id && item.fingerprint === style.fingerprint)) throw new AppError('RESUME_INPUT_CHANGED', '风格已变化或不存在', 409);
+        if (pendingStyleIds.has(style.id) && !catalog.styles.some((item) => item.id === style.id && item.fingerprint === style.fingerprint)) throw new AppError('RESUME_INPUT_CHANGED', '风格已变化或不存在', 409);
       }
       const definitions = [];
       for (const style of batch.styles) {
-        const items = batch.items.filter((item) => item.styleId === style.id && item.status !== 'completed');
+        const items = batch.items.filter((item) => item.styleId === style.id && item.status === 'pending');
         if (!items.length) continue;
         const id = randomUUID();
         definitions.push({
