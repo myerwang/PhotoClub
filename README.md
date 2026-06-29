@@ -42,9 +42,9 @@ PhotoClub 是一个本地 AI 照相馆。你可以把家人、朋友、虚拟角
 6. 填写本次额外要求，例如“夏天感”“更像杂志封面”“情侣合照”。
 7. 点击生成，完成后在结果区预览大图或打开输出文件夹。
 
-### 添加自己的风格 🎨
+### 添加并提交新风格 🎨📮
 
-在控制台里添加最简单：
+新风格的正确流程是：先在界面里创建和试跑，确认效果好，再把生成的 style 文件提交到仓库。
 
 1. 打开 PhotoClub 控制台。
 2. 在风格列点击“添加风格”。
@@ -52,17 +52,11 @@ PhotoClub 是一个本地 AI 照相馆。你可以把家人、朋友、虚拟角
 4. 点击“创建风格”，系统会把你的描述整理成可复用 style。
 5. 新风格会出现在风格列表里，直接选择人物和这个风格进行生成。
 6. 第一次成功生成后，这个风格会自动使用最后一张结果作为本地缩略图。
-
-### 提交新风格给仓库 📮
-
-想把好用的风格分享给大家，按这个手顺：
-
-1. 先用控制台“添加风格”创建并试跑，确认效果稳定、不是一次性需求。
-2. 找到新生成的 `styles/<styleId>.md` 文件。
-3. 只提交这个 `styles/<styleId>.md` 文件。
-4. 不要提交 `output/`、`profiles/`、`input/`、`styles/previews/` 里的图片。
-5. 不要提交本地生成历史、缩略图或私人照片。
-6. 发起 PR，简单说明这个风格适合什么场景，例如“适合夜景街拍”“适合情侣胶片合照”“适合贴纸输出”。
+7. 如果试跑效果稳定、不是一次性需求，找到新生成的 `styles/<styleId>.md` 文件。
+8. 只提交这个 `styles/<styleId>.md` 文件。
+9. 不要提交 `output/`、`profiles/`、`input/`、`styles/previews/` 里的图片。
+10. 不要提交本地生成历史、缩略图或私人照片。
+11. 发起 PR，简单说明这个风格适合什么场景，例如“适合夜景街拍”“适合情侣胶片合照”“适合贴纸输出”。
 
 风格文件应该只描述摄影风格、构图、光线、色彩、服装氛围和后期质感，不要固定具体人物、五官、年龄、性别或一次性要求。
 
@@ -124,9 +118,9 @@ PhotoClub はローカルで使える AI 写真館です。人物の多視点リ
 6. 今回だけの追加要望を入力します。例：夏らしく、雑誌表紙風、カップル写真など。
 7. 生成後、結果をクリックして拡大表示するか、出力フォルダを開きます。
 
-### 自分のスタイルを追加する 🎨
+### 新しいスタイルを追加して投稿する 🎨📮
 
-コンソールから追加するのが一番簡単です。
+新しいスタイルは、まず画面で作成して実際に試し、良ければ生成された style ファイルだけを PR で投稿する流れです。
 
 1. PhotoClub コンソールを開きます。
 2. スタイル列の「スタイル追加」を押します。
@@ -134,17 +128,12 @@ PhotoClub はローカルで使える AI 写真館です。人物の多視点リ
 4. 「スタイル作成」を押すと、再利用できる style として整理されます。
 5. 新しいスタイルが一覧に出たら、人物と一緒に選んで生成します。
 6. 初回生成に成功すると、そのスタイルの最後の生成結果がローカル縮小プレビューとして使われます。
-
-### 新しいスタイルを投稿する 📮
-
-良いスタイルを共有したい場合は、この手順でお願いします。
-
-1. まずコンソールの「スタイル追加」で作成し、実際に生成して安定しているか確認します。
-2. 新しくできた `styles/<styleId>.md` を確認します。
-3. 提出するのは `styles/<styleId>.md` だけです。
-4. `output/`、`profiles/`、`input/`、`styles/previews/` の画像は提出しないでください。
-5. ローカル履歴、プレビュー画像、個人写真は提出しないでください。
-6. PR では「夜景街撮り向け」「カップルのフィルム写真向け」「ステッカー出力向け」など、使いどころを短く書いてください。
+7. 実際に生成して安定していて、一度きりの要望ではないことを確認します。
+8. 新しくできた `styles/<styleId>.md` を確認します。
+9. 提出するのは `styles/<styleId>.md` だけです。
+10. `output/`、`profiles/`、`input/`、`styles/previews/` の画像は提出しないでください。
+11. ローカル履歴、プレビュー画像、個人写真は提出しないでください。
+12. PR では「夜景街撮り向け」「カップルのフィルム写真向け」「ステッカー出力向け」など、使いどころを短く書いてください。
 
 スタイルファイルには、写真表現、構図、光、色、服装の雰囲気、質感だけを書きます。特定人物、顔の特徴、年齢、性別、一度きりの要望は固定しないでください。
 
@@ -198,9 +187,9 @@ The goal is a repeatable photo workflow, not one-off prompt experiments:
 6. Add a one-time request such as “summer mood”, “magazine cover”, or “couple photo”.
 7. Generate, preview the large image, or open the output folder.
 
-### Add your own style 🎨
+### Add and submit a new style 🎨📮
 
-The easiest way is from the console:
+The correct flow is: create and test the style in the UI first, then submit only the generated style file by PR.
 
 1. Open the PhotoClub console.
 2. Click “Add style” in the style column.
@@ -208,17 +197,11 @@ The easiest way is from the console:
 4. Click “Create style”. PhotoClub turns your description into a reusable style.
 5. The new style appears in the style list. Select it with one or more people and generate.
 6. After the first successful generation, the style uses the last generated result as its local thumbnail.
-
-### Submit a new style 📮
-
-To share a useful style with the repository:
-
-1. Create it with “Add style” in the console and test it with real generation first.
-2. Find the new `styles/<styleId>.md` file.
-3. Submit only that `styles/<styleId>.md` file.
-4. Do not submit images from `output/`, `profiles/`, `input/`, or `styles/previews/`.
-5. Do not submit local history, thumbnails, or private photos.
-6. Open a PR and briefly describe when to use the style, such as “good for night street photos”, “good for couple film photos”, or “good for sticker output”.
+7. If the test result is stable and the style is not a one-time request, find the new `styles/<styleId>.md` file.
+8. Submit only that `styles/<styleId>.md` file.
+9. Do not submit images from `output/`, `profiles/`, `input/`, or `styles/previews/`.
+10. Do not submit local history, thumbnails, or private photos.
+11. Open a PR and briefly describe when to use the style, such as “good for night street photos”, “good for couple film photos”, or “good for sticker output”.
 
 A style should describe photography, composition, lighting, color, wardrobe mood, and post-processing texture. Do not lock it to a specific person, facial features, age, gender, or one-time request.
 
