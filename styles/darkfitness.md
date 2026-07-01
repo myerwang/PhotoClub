@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T10:55:36.063Z
 
 ## Source Prompt
 
-A dynamic fitness poster of an athlete training in a dark gym, dramatic side lighting, sweat details, motivational composition, high contrast.
+采用来源示例“Fitness Poster”明确给出的摄影或拼贴处理、材质、色彩和后期质感。 Use the source-defined 景别、拼贴层次、海报节奏或人物动作；人物属性、人数与组合由当前任务决定。 Use the source-defined 霓虹、闪光、自然光、棚拍或健身房侧光，以及相应的对比度与颗粒。
 
 ## Adaptation Log
 

@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A realistic fashion-photo style full-body cropped portrait of a {argument name="character type" default="young woman"} shot from a dramatic low angle against a bright blue sky with 2 soft white cloud patches. She is turned mostly away from the camera in a three-quarter back view, looking over her shoulder, with long wavy {argument name="hair color" default="auburn red"} hair falling to mid-back and moving naturally in the breeze. She wears a fitted black ribbed long-sleeve crop top that exposes the waist, olive green cargo pants with a low-rise fit, 5 visible belt-mounted utility pouches around the waistband, 2 visible back flap pockets, and 1 visible side cargo pocket on the left thigh. She also wears a pair of glossy black leather gloves, with one gloved hand raised near her neck and jaw and the other lowered near her thigh. Emphasize a cinematic, confident pose, natural daylight, realistic skin texture, detailed fabric stitching and seams, slightly sensual editorial styling, clean outdoor background, shallow depth of field, sharp focus on the body and clothing, high-resolution photorealism.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

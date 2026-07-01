@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A stunning black and white studio portrait of {argument name="subject" default="uploaded person"}. Eye-level medium shot, framed from the waist up. The subject is standing with his arms casually but firmly crossed over his chest. He is looking downward and slightly off-camera to the left with a calm, contemplative posture. He is wearing a {argument name="outfit" default="dark, heavy-textured waffle-knit long-sleeve sweater"} and a delicate silver chain necklace with a small pendant. He is wearing a classic analog watch with a light dial and leather strap on the lower arm. The background is a {argument name="background style" default="stark, graphic vertical split: pure white on the left half and pure deep black on the right half"}. High-end commercial photography, monochrome masterpiece. Soft but dramatic directional studio lighting originating from the left, highlighting the textures of the clothing and skin while casting natural, smooth shadows on the right side. Crisp focus, hyper-realistic,8k resolution, cinematic composition. ar 4:5
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

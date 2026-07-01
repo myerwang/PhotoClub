@@ -155,6 +155,23 @@ export function buildGenerateBatchDefinitions({
   });
 }
 
+async function removeStaleGeneratedOutputs(rootDir, profileIds, styleIds) {
+  const outputDir = path.join(rootDir, 'output');
+  let entries;
+  try {
+    entries = await readdir(outputDir, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === 'ENOENT') return;
+    throw error;
+  }
+  const prefixes = new Set(styleIds.map((styleId) => `${profileIds.join('+')}-${styleId}-`));
+  await Promise.all(entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.png') && [...prefixes].some((prefix) => entry.name.startsWith(prefix)))
+    .map((entry) => unlink(path.join(outputDir, entry.name)).catch((error) => {
+      if (error.code !== 'ENOENT') throw error;
+    })));
+}
+
 export function createProfileJobDefinition({
   rootDir,
   jobId = randomUUID(),
@@ -485,6 +502,7 @@ export function createControlServer({
       }
       const batchId = randomUUID();
       await mkdir(path.join(rootDir, 'output'), { recursive: true });
+      await removeStaleGeneratedOutputs(rootDir, profileIds, styleIds);
       const jobDefinitions = buildGenerateBatchDefinitions({
         rootDir,
         profileIds,

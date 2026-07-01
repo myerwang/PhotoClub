@@ -1,17 +1,17 @@
 ---
 style_id: professionaldarkbackgroundli
-name: Professional Dark-Background LinkedIn Portrait
+name: Professional Dark-Background Portrait
 source_url: https://github.com/gpt-image2/awesome-gptimage2-prompts
 source_title: gpt-image2/awesome-gptimage2-prompts
 source_result: 34
 retrieved_at: 2026-06-19T11:04:59.421Z
 ---
 
-# Style: Professional Dark-Background LinkedIn Portrait
+# Style: Professional Dark-Background Portrait
 
 ## Source Prompt
 
-A polished studio head-and-shoulders LinkedIn profile portrait of a {argument name="subject gender" default="man"} centered in frame, facing straight toward the camera with a neutral, confident expression, cropped from the upper chest to just above the head. He has short {argument name="hair color" default="dark brown"} hair with a slightly textured top, visible ears, and light stubble beard along the jaw and chin. He wears 2 clothing layers: a dark charcoal tailored blazer over a plain white crew-neck t-shirt. The background is a deep black seamless studio backdrop with a subtle soft vignette and no visible props. Use professional corporate portrait photography styling, soft directional key light from above and slightly to one side, gentle rim separation on the shoulders and hair, realistic skin texture, sharp focus on clothing and neck, shallow depth of field, high contrast, clean premium retouching, natural color grading, and a modern executive-yet-approachable look suitable for a {argument name="platform" default="LinkedIn"} profile photo. Compose it symmetrically, minimal and elegant, with the subject isolated against the dark background, photographed as if with an 85mm lens in a high-end studio.
+Create a professional dark-background portrait using the selected person's identity. Use clean studio headshot or upper-body framing, dark neutral backdrop, polished but natural lighting, professional wardrobe only when the style lacks clothing direction, sharp facial detail, and restrained corporate editorial realism.
 
 ## Adaptation Log
 
@@ -20,15 +20,17 @@ A polished studio head-and-shoulders LinkedIn profile portrait of a {argument na
 
 ## Visual Rules
 
-- 采用来源 prompts.json 条目 16305“Professional Dark-Background LinkedIn Portrait”明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。
+- Professional dark-background portrait treatment: charcoal or black studio backdrop, polished headshot lighting, crisp facial detail, natural skin texture, and restrained corporate editorial finish.
+- Avoid platform logos, app UI, text overlays, badges, or profile-card graphics. The image is a standalone portrait.
 
 ## Composition
 
-- 采用来源提示词明确指定的景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。
+- Frame as a head-and-shoulders or upper-body portrait with the full face centered and uncropped.
+- Use selected subject count only; no inset comparison images or extra duplicate portraits.
 
 ## Lighting And Color
 
-- 采用来源提示词明确指定的光源、色温、曝光、色彩关系和相机或胶片质感。
+- Soft key light, controlled rim or fill light, dark neutral background, accurate exposure on the face, and high-resolution realistic studio texture.
 
 ## Subject Boundary
 

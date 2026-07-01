@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T10:51:27.819Z
 
 ## Source Prompt
 
-Shot on an iPhone, unedited RAW look, low-contrast golden hour on a Lisbon rooftop just before sunset, mild lens flare from the low sun, subtle chromatic aberration at the frame edges, candid full-body shot of a late-20s woman mid-laugh, wind-tousled dark curls, natural non-dewy skin with visible sun freckles, wearing a washed linen sundress and simple leather sandals, one hand holding a cheap plastic sunglasses by the bridge, the other brushing hair out of her face, terracotta-tiled rooftops and the Tagus river softly blurred in the background, authentic handheld angle slightly tilted, no model-like posing, no polished editing, no watermark, no text
+采用来源卡片 3“Rooftop golden hour candid”明确给出的摄影媒介、环境质感、服装语言和后期处理。 Use the source-defined 景别、机位、动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 自然光、环境光、混合色温、曝光与胶片或手机成像质感。
 
 ## Adaptation Log
 

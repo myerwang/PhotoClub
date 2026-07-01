@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A realistic candid street portrait of a young East Asian woman standing centered on a quiet urban road at blue hour, photographed from chest-up with a shallow depth of field. She has {argument name="hair color" default="very dark brown"} long straight-to-softly-wavy hair with a center part, smooth natural texture, and a few loose strands framing the sides of her face. She wears a fitted {argument name="top color" default="black"} ribbed turtleneck sweater with long sleeves, minimal accessories, and no visible patterns. Her pose is relaxed and front-facing, shoulders slightly angled, with a calm understated mood. The setting is a narrow Japanese neighborhood street with 2 visible parked or passing cars in the blurred background, low-rise buildings on the left, a line of trees on the right, utility poles and overhead wires receding into the distance, and soft evening ambient light. Use natural skin tones, realistic photography, subtle cinematic color grading, gentle bokeh, crisp fabric detail, and an intimate moody atmosphere, as if shot on an 85mm lens at wide aperture.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

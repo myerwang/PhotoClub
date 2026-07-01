@@ -46,7 +46,7 @@ test('applies one accepted result and writes a sourced formal style', async () =
     promptLocation: 'Section: Studio portrait example',
     styles: [{
       id: 'rimlight', name: '轮廓光', englishName: 'Rim Light Portrait',
-      sourcePrompt: 'A studio portrait with a strong rim light and deep neutral backdrop.',
+      sourcePrompt: 'A portrait of a young East Asian woman with sharp eyes and a censor block over her face. Use a strong rim light and deep neutral backdrop.',
       adaptations: ['Replace the fixed subject with the selected character reference.'],
       visualRules: ['Use a strong rim light against a deep neutral backdrop.'],
       composition: ['Frame the person as a studio portrait.'],
@@ -57,6 +57,9 @@ test('applies one accepted result and writes a sourced formal style', async () =
   const markdown = await readFile(path.join(root, 'styles/rimlight.md'), 'utf8');
   assert.match(markdown, /source_url: https:\/\/example\.com\/prompts\?utm_source=google/);
   assert.doesNotMatch(markdown, /thumbnail:/);
+  assert.match(markdown, /Use a strong rim light against a deep neutral backdrop/);
+  assert.match(markdown, /Frame the person as a studio portrait/);
+  assert.doesNotMatch(markdown, /young East Asian woman|sharp eyes|censor block/i);
   assert.match(markdown, /Apply `system\/rules\/style_base\.md`/);
   assert.equal((await nextResult(root)).rank, 2);
 });

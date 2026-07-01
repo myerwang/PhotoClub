@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T10:51:27.819Z
 
 ## Source Prompt
 
-35mm film photography inside a Brooklyn bodega at 2am, overhead fluorescent tubes mixed with the red glow of a lottery sign, authentic halation and mild film grain, candid editorial tone, waist-up framing, late-20s man with realistic uneven stubble, tired dark-circled eyes, natural pore-level skin texture on a warm olive undertone, slightly damp hair from light drizzle, wearing a faded navy hoodie under an oversized canvas jacket, leaning on the counter next to a stack of NY Post newspapers and a spinning hot dog warmer, foreground bottles and chip bags slightly out of focus, cold cashier light on his left cheek with warm ambient bounce on the right, honest documentary street feel, no plastic skin, no logo alterations, no watermark, no text overlay
+采用来源卡片 1“Late-night bodega portrait”明确给出的摄影媒介、环境质感、服装语言和后期处理。 Use the source-defined 景别、机位、动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 自然光、环境光、混合色温、曝光与胶片或手机成像质感。
 
 ## Adaptation Log
 

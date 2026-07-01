@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A realistic lifestyle fashion photo of a woman standing indoors in a warm, sunlit modern loft living room, framed from mid-thigh up, facing the camera with her hands tucked into the pockets of an oversized black satin varsity-style bomber jacket. The jacket is the clear focus: glossy black fabric, ribbed collar and hem, snap-button front, slightly puffed sleeves, and large collegiate lettering across the chest that reads {argument name="front text" default="NEW YORK"} in bold orange letters with white outlines. Add a smaller orange-and-white sports patch on the upper sleeve and white block text on the opposite sleeve for an authentic team-jacket feel. Style the model with long, loose, softly wavy balayage hair in {argument name="hair color" default="dark brown with caramel highlights"}, minimal jewelry including layered gold necklaces, and light gray sweatpants visible at the bottom of frame. Keep the face intentionally obscured with a centered rectangular blur block for privacy. The setting is a minimalist beige interior with tall industrial windows on the left casting strong morning sunlight and geometric shadows, a cream sofa with a pillow, a low coffee table with 3 stacked books and a dark bowl, pale walls, and a simple wooden side table in the background. Shoot in a high-end editorial e-commerce style with natural golden light, soft shadows, sharp jacket detail, shallow depth of field, neutral warm tones, and a clean premium streetwear aesthetic.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

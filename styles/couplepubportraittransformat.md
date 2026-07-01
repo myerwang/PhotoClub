@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-Using REFERENCE_0, transform the older couple so they are both looking directly at the camera and smiling. For the man on the left, add a {argument name="man's facial hair" default="full white beard"}, remove his glasses, and dress him in a {argument name="man's clothing" default="green fleece jacket"}. For the woman on the right, add glasses, change her hair to straight with bangs, and dress her in a {argument name="woman's clothing" default="denim jacket and white scarf"}. Have both subjects holding glasses of beer. On the wooden table, add 1 bowl of potato chips and 1 small lit lantern. Replace the background with a {argument name="background setting" default="warm, blurred pub interior with 2 background patrons"}.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

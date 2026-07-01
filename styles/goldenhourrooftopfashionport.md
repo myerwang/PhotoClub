@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A cinematic golden-hour rooftop portrait of a stylish young woman standing by a balcony railing high above a modern city skyline, photographed vertically with a shallow depth of field. She has {argument name="hair color" default="dark brown"} long wavy hair glowing with warm sunset backlight, and her face is turned slightly away and obscured from view. She wears a black tailored blazer over a fitted white scoop-neck ribbed tank top, paired with high-waisted cream trousers with one hand in her pocket, plus a delicate necklace and a subtle bracelet or watch. The composition is waist-up to upper-thigh framing, elegant and fashion-editorial, with the woman placed prominently in the foreground and soft blurred skyscrapers in the background. Use warm orange sunlight, realistic skin and fabric textures, soft highlights on the hair and shoulders, a luxurious urban atmosphere, and a polished lifestyle photography look as if shot for a premium fashion campaign in {argument name="city setting" default="a modern downtown skyline"} during {argument name="time of day" default="sunset"}.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

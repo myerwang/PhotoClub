@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A cinematic vertical smartphone photo of a glamorous young woman sitting in the front passenger seat of a car at night, shot from slightly above chest level in a tight mid-shot. She has {argument name="hair color" default="dark brown"} hair pulled back loosely with soft strands near the ears, and is wearing a fitted ribbed brown zip-front top or dress with a deep neckline, partially unzipped, creating a sleek nightlife look. Her face is mostly out of frame or obscured, keeping the focus on pose, outfit, and mood rather than identity. She holds 1 large black tub of caramel popcorn in her lap with one hand, while her other hand is raised lightly near her chin in a casual, candid pose. The setting is the interior of a car with 1 visible beige passenger seat, 1 visible door panel with window controls, and a side window showing blurred colorful city lights outside, suggesting nighttime urban traffic. Use warm low-key lighting from the front-left, realistic skin texture, glossy highlights on the collarbone and fabric, shallow depth of field, bokeh streetlights, photorealistic detail, intimate composition, luxury nightlife atmosphere, and a moody editorial aesthetic. Outfit and palette should stay in coordinated brown and neutral tones, with the popcorn sharply detailed and slightly glossy from caramel coating. Render as realistic photography, high contrast, soft shadows, vertical 9:16 framing.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

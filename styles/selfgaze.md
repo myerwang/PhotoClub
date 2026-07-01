@@ -11,23 +11,7 @@ retrieved_at: 2026-06-19T06:34:49.525Z
 
 ## Source Prompt
 
-Ultra-realistic conceptual portrait of a young man with curly hair and light stubble, wearing yellow-tinted rectangular sunglasses, a beige minimal t-shirt, blue jeans, and off-white sneakers. He is sitting casually with a relaxed posture.
-
-The twist: he is seated on a large, hyper-realistic version of his own detached head placed on the ground. The head is scaled up, lying sideways, with the same facial features and sunglasses, creating a surreal self-reflection concept.
-
-Composition: centered, full-body shot, neutral studio background with soft beige tones, minimal aesthetic. Clean negative space.
-
-Typography integrated into the background:
-
-* Handwritten-style text at the top: “HEAVY”
-* Below it, smaller text: “ON MY OWN MIND” with “MIND” crossed out
-* Large, rough, scribbled text in black: “HEAD”
-
-Lighting: soft diffused studio lighting, subtle shadows, high detail, fashion editorial quality.
-
-Style: blend of surrealism and modern streetwear campaign, minimal yet expressive, high-resolution, 8k, sharp focus, natural skin texture.
-
-Mood: introspective, mental weight, identity, self-awareness.
+Create a surreal self-gaze portrait using the selected person's identity. Use reflective or conceptual composition, subtle mirror/reflection logic, introspective mood, clean surreal realism, and controlled visual repetition without adding extra identities or replacing the face.
 
 ## Adaptation Log
 
@@ -36,15 +20,17 @@ Mood: introspective, mental weight, identity, self-awareness.
 
 ## Visual Rules
 
-- 采用来源案例 482“Surreal Self Gaze”明确给出的摄影或视觉处理、环境、材质和后期质感，不增加来源之外的风格元素。
+- Surreal self-gaze treatment: reflective surfaces, conceptual gaze direction, quiet psychological mood, clean surreal realism, and restrained visual duplication effects.
+- Any reflection must be recognizably the same selected person and must not become a second unrelated face.
 
 ## Composition
 
-- 采用来源提示词明确指定的景别、机位、人物动作和环境布局；人物属性、人数与组合由当前任务决定。
+- Use a single primary subject unless multiple profiles are selected. Reflections are allowed only as secondary visual effects and must keep the same identity.
+- Keep the primary full face visible and uncropped.
 
 ## Lighting And Color
 
-- 采用来源提示词明确指定的照明方式、色彩关系、曝光和成像质感。
+- Controlled studio or interior light, muted cinematic color, realistic reflections, gentle contrast, and polished surreal editorial texture.
 
 ## Subject Boundary
 

@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A cinematic studio portrait of two men facing each other in a tense stare-down against a plain dark grey background. On the left, {argument name="left actor" default="Jensen Ackles"} wearing {argument name="left costume" default="a dark blue textured superhero suit with red gloves, gold eagle pauldrons, and a cape"}. On the right, {argument name="right actor" default="Antony Starr"} wearing {argument name="right costume" default="a dark green and black tactical suit with a star emblem on the chest and red gloves"}. The man on the right has his hands on his hips. Dramatic, moody studio lighting, highly detailed, photorealistic.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

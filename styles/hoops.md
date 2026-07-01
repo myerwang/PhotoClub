@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T06:31:22.135Z
 
 ## Source Prompt
 
-A photorealistic video sequence captures a young boy with messy orange hair and thick-framed glasses, as seen in image_0.png, image_1.png, and other source frames. He is dressed in a black basketball jersey and matching shorts with purple and blue trim, featuring the text "WIZZGEN 23" on the front and "CHICAGO 23" on the back (image_4.png). The setting is an outdoor asphalt city basketball court with green trees and a visible basketball hoop. The action begins with the boy in a low stance, dribbling the ball between his legs (image_0.png through image_3.png), then transitions to him standing taller and performing crossovers (image_5.png through image_7.png), followed by him successfully spinning the ball on his finger (image_8.png), and finally posing with a peace sign while holding the ball (image_9.png). The lighting is soft daylight under an overcast sky.
+采用source prompt明确给出的摄影或视觉处理、环境、材质和后期质感，不增加来源之外的风格元素。 Use the source-defined 景别、机位、人物动作和环境布局；人物属性、人数与组合由当前任务决定。 Use the source-defined 照明方式、色彩关系、曝光和成像质感。
 
 ## Adaptation Log
 

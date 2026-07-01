@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A full-body photorealistic portrait of a female tokusatsu-style space heroine standing in a modern concrete corridor, leaning lightly against a pale gray column. She wears a retro-futuristic armored bodysuit with glossy materials: a silver and black skin-tight jumpsuit, bulky red shoulder armor, red forearm guards, a red belt with a large rounded hip pouch, red knee-high armored boots, and white gloves. Her chest armor is metallic silver with red trim and a single circular blue orb on the right side of the chest, with small vent-like details and a mechanical collar ring around the neck connected to two short gray cables resting on the shoulders. She holds a matching red, white, blue, and black full-face helmet in her left hand at thigh level. Her hair is {argument name="hair color" default="dark brown"}, medium length, slightly messy, tied back loosely with strands falling around the face. The character’s face is intentionally obscured by a soft rectangular blur. The setting is an open, quiet station-like or parking-structure hallway with smooth stone walls and floor, shallow depth of field, and a blue square sign with the white number {argument name="background number" default="5"} visible in the background on the right. Natural soft daylight, realistic reflections on the glossy armor, cinematic cosplay photography, centered vertical composition, full body in frame, neutral stance, high detail.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

@@ -11,11 +11,7 @@ retrieved_at: 2026-06-19T06:40:00.815Z
 
 ## Source Prompt
 
-A 1940s film-noir black-and-white movie still, landscape 16:9, high contrast. Shot on 35mm with visible grain.
-
-Scene: a detective in trench coat and fedora stands alone at a rain-soaked street corner at 2 a.m., cigarette in hand, smoke curling upward. Wet cobblestones reflecting a single buzzing street lamp. A "HOTEL" neon sign on brick facade with letters "HOTE_" (the L flickered out). A vintage 1946 sedan parked at the curb, tail-lights glowing through drizzle.
-
-Lighting: classic chiaroscuro — single hard key light above right, venetian-blind shadows on the wall behind him. Deep blacks, silvered highlights, full tonal range from pure white to pure black. No colour. Frame should feel lifted from "The Maltese Falcon", "Double Indemnity", or "The Third Man".
+1940 年代黑白黑色电影剧照，35mm 可见颗粒和雨夜侦探氛围。 湿润鹅卵石、故障霓虹旅店招牌和老式轿车构成时代环境。 横向街角场景，人物独立站于雨中。 高反差明暗法，单一硬主光和百叶窗投影。
 
 ## Adaptation Log
 

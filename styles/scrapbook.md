@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T10:55:36.063Z
 
 ## Source Prompt
 
-A warm, moody scrapbook-style portrait collage of the uploaded person with messy dark hair, glowing tan skin, black shirt, and a gold cross necklace. Multiple overlapping printed portrait photos of the same person, including front view, side profile, and extreme eye close-up. Add torn paper, masking tape, vintage floral stickers, aged notebook scraps, and a retro music-card detail. Use amber low light, flash-photo look, deep shadows, subtle grain, brown-orange vintage color grading, and an intimate indie Tumblr/Pinterest moodboard aesthetic.
+采用来源示例“Moody Scrapbook Portrait”明确给出的摄影或拼贴处理、材质、色彩和后期质感。 Use the source-defined 景别、拼贴层次、海报节奏或人物动作；人物属性、人数与组合由当前任务决定。 Use the source-defined 霓虹、闪光、自然光、棚拍或健身房侧光，以及相应的对比度与颗粒。
 
 ## Adaptation Log
 

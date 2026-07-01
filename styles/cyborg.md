@@ -11,17 +11,7 @@ retrieved_at: 2026-06-19T06:31:22.135Z
 
 ## Source Prompt
 
-Ultra-realistic cinematic close-up of a young woman with pale, freckled skin and wet dark hair. Her eyes are vivid blue-green and she wears a silver septum ring.
-Cybernetics: A massive industrial robotic prosthetic arm with worn metal textures, visible wiring, and hydraulic components rests near her face, metallic fingers curved toward her temple.
-A thin cybernetic sensor wire traces across her cheekbone just below the eye.
-Her jawline and neck show embedded steel plating and brushed-metal body augmentations.
-
-Background: Clean, neutral studio setting in muted grey-white.
-Lighting: Soft front-left directional light casting detailed shadows across mechanical joints while catching moisture on skin and lips.
-Mood: Raw, futuristic, and melancholic with a high-end editorial aesthetic.
-Framing: Off-center composition, shallow focus on the eye and robotic hand texture detail.
-Surface detail: Pores clearly visible, individual wet hair strands, scratched and oil-marked metal.
-Color grade: Muted cool palette, high contrast. Photorealistic digital art style.
+采用source prompt明确给出的摄影或视觉处理、环境、材质和后期质感，不增加来源之外的风格元素。 Use the source-defined 景别、机位、人物动作和环境布局；人物属性、人数与组合由当前任务决定。 Use the source-defined 照明方式、色彩关系、曝光和成像质感。
 
 ## Adaptation Log
 

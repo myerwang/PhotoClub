@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A dreamy vertical spring portrait photo of a young woman standing in profile in a vast field of tiny blue nemophila flowers under a bright blue sky with soft white clouds. She wears a fitted ribbed knit dress in {argument name="dress color" default="pale sky blue"} with elbow-length sleeves, and her long straight brown hair is blowing dramatically to the right in the wind. Frame her from about mid-thigh upward, slightly off-center to the right, with the flower field filling the background and a small rope fence with wooden posts visible along the lower right edge beside a gravel path. Use soft natural morning sunlight, airy high-key exposure, gentle pastel tones, shallow depth of field, subtle lens bloom, and a romantic social-media snapshot aesthetic. Add a few large out-of-focus white flower petals drifting across the foreground. Overlay handwritten white Japanese text directly on the image: at the upper left, "{argument name="greeting text" default="おはよう"}" with a small doodled cloud beside it; below that, the date "{argument name="date text" default="2026.04.22"}"; across the lower middle-right, "{argument name="main note text" default="嫁と ネモフィラデート✌︎"}"; and beneath it, "{argument name="sub note text" default="に使っていいよっ♡"}". Keep the handwriting casual, playful, and slightly uneven like a marker pen on a photo.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

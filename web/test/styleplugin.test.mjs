@@ -40,14 +40,17 @@ test('parses a self-contained style and fingerprints exact content', () => {
 
 test('validates and renders a user style without subject restrictions', () => {
   const draft = validateStyleDraft({
-    id: 'softfilm', name: '柔和胶片', englishName: 'Soft Film', sourcePrompt: 'soft film portrait',
+    id: 'softfilm', name: '柔和胶片', englishName: 'Soft Film',
+    sourcePrompt: 'Portrait of a young named actor with blue eyes and a rectangular blur censor block over the face. Use soft 35mm film grain, warm window light, and a narrow bedroom background.',
     adaptations: ['Remove fixed identity'], visualRules: ['Fine grain'],
     composition: ['Eye-level portrait'], lighting: ['Soft window light'],
   });
   const rendered = renderUserStyle(draft);
   assert.match(rendered, /style_id: softfilm/);
   assert.match(rendered, /source_type: user/);
-  assert.match(rendered, /soft film portrait/);
+  assert.match(rendered, /Fine grain/);
+  assert.match(rendered, /Eye-level portrait/);
+  assert.doesNotMatch(rendered, /young named actor|blue eyes|censor|block over the face/i);
   assert.match(rendered, /system\/rules\/style_base\.md/);
   assert.throws(() => validateStyleDraft({ ...draft, id: 'Bad-id' }), /style id/);
 });

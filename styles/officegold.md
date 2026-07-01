@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T10:59:02.933Z
 
 ## Source Prompt
 
-A Japanese businessman (1) in a dark navy three-piece suit, sharp jawline, confident eyes, mid-30s (2), standing with arms crossed slightly off-center to the right, facing camera (3), modern glass-walled office at dawn with Tokyo skyline visible through windows (4), soft golden hour side lighting from upper left, warm color temperature (5), 85mm f/1.4 lens, shallow depth of field with creamy bokeh, three-quarter view, bust shot (6), photorealistic editorial portrait, cinematic color grading (7). Format 16:9.
+采用来源七要素示例明确给出的写实编辑人像、现代玻璃办公室、正式服装与电影调色。 人物略偏画面右侧、面向镜头，采用三分之四视角胸像与 85mm f/1.4 浅景深；人物属性和人数由当前任务决定。 使用左上方柔和金色时刻侧光、暖色温，窗外保留黎明城市层次和奶油状散景。
 
 ## Adaptation Log
 

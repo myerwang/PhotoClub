@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T10:53:45.538Z
 
 ## Source Prompt
 
-1950年代の実写のカラー写真にします。相応の劣化があります。
+Create a 1950s color-photograph style portrait using the selected person's identity. Use mid-century candid or publicity-photo realism, period-appropriate setting and wardrobe when the style needs clothing, natural practical lighting, muted early color film, visible grain, slight fading, gentle softness, and believable archival texture.
 
 ## Adaptation Log
 
@@ -20,15 +20,17 @@ retrieved_at: 2026-06-19T10:53:45.538Z
 
 ## Visual Rules
 
-- 采用来源图注 38 明确给出的实写媒介、年代语汇、场景氛围和影像处理。
+- 1950s color photograph treatment: mid-century live-action realism, understated period set dressing, archival color film, soft detail, mild grain, and light age-related fading.
+- Preserve the selected person's face clearly; do not transform the subject into a period actor, fictional character, or unrelated historical template.
 
 ## Composition
 
-- 采用来源提示词明确指定的节目、电影、现场花絮或年代照片构图；人物属性、人数与组合由当前任务决定。
+- Use a documentary, publicity still, or behind-the-scenes style composition with the selected subject count only.
+- Keep the full face in frame and large enough for identity verification.
 
 ## Lighting And Color
 
-- 依据来源场景使用自然可信的现场照明与相应年代的色彩、颗粒、曝光和劣化质感。
+- Natural practical lighting, muted 1950s color response, visible film grain, moderate contrast, soft highlights, slight fading, and realistic archival wear.
 
 ## Subject Boundary
 

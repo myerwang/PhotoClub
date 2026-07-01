@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A cinematic divine portrait of a Jesus-like holy figure from the chest up, centered and facing forward, with the face intentionally obscured by a solid rectangular block in a warm brown skin-tone color. He has shoulder-length wavy dark brown hair, a short beard visible below the block, and wears flowing layered white robes with a gold embroidered sash over one shoulder. One hand is extended toward the viewer in the lower left foreground, palm open in a welcoming, blessing gesture. Behind his head is 1 large glowing circular halo with intricate luminous ring details, surrounded by intense golden backlight and radiant sunbeams bursting through dramatic heavenly clouds. Faint classical temple architecture appears on both sides in the distance, creating a celestial kingdom atmosphere. Warm gold-and-cream color grading, volumetric light, ultra-detailed fabric folds, spiritual epic fantasy realism, symmetrical centered composition, soft glowing highlights, inspirational religious iconography, vertical portrait framing.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

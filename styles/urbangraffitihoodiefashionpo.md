@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A moody full-body fashion portrait of a {argument name="subject" default="young woman"} standing in a narrow urban alley or tunnel covered in dense colorful graffiti, photographed at night with dramatic low-key lighting and flash-lit realism. She is leaning casually against the wall with 1 hand touching a large pair of over-ear black headphones and 1 hand tucked into the front pocket of an oversized {argument name="hoodie color" default="mustard yellow"} hoodie. The hoodie is long enough to read almost like a hoodie dress and has a simple black smiley-face graphic centered on the chest with white drawstrings. She wears a black backpack with 2 visible shoulder straps, white crew socks, and chunky black-and-white low-top sneakers. Her legs are bare, and her pose is relaxed with one knee slightly bent and one foot set forward. Her hair is shoulder-length, slightly messy, and {argument name="hair color" default="dark blonde"}. Compose the shot vertically from head to shoes, with the subject centered slightly left of frame. The background is a gritty painted wall dominated by turquoise blue, yellow, pink, and black spray paint, with drips, tags, and abstract cartoon-like graffiti shapes creating a raw street-art atmosphere. The floor is dark, worn, and reflective with paint splatters. Use high contrast, deep shadows, realistic skin and fabric texture, editorial streetwear photography style, underground urban vibe, sharp focus on clothing and body, subdued facial detail, and a cinematic dark nightlife mood.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

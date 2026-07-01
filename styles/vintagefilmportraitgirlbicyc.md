@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A {argument name="photography style" default="vintage film photography"} portrait of a {argument name="subject description" default="young Asian woman"} smiling broadly at the camera. She is leaning forward playfully while holding the handlebars of a bicycle on a sunny neighborhood street. She wears a {argument name="top clothing" default="white short-sleeved t-shirt"}, a {argument name="bottom clothing" default="dark blue pleated skirt"}, white socks, and white sneakers. Her long dark hair blows slightly in the breeze. The bicycle has a front wire basket containing a {argument name="basket contents" default="clear plastic bag of oranges"}. The background features a paved road, dappled sunlight through trees, and a utility pole, capturing a nostalgic, bright summer day aesthetic.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

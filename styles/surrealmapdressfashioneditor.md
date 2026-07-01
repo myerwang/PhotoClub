@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A high-fashion editorial photograph of a female model standing in an {argument name="environment" default="arid desert landscape"} with distant mountains under a soft cloudy sky. She is wearing a spectacular, structured haute couture dress made entirely of folded {argument name="dress material" default="vintage maps"}, featuring sharp, origami-like geometric layers and a strapless bodice. She has dark hair swept up, striking facial features, and wears large circular earrings resembling compasses. Surrounding her in the air are exactly 7 floating {argument name="floating objects" default="elongated compass needles with clock faces in the center"}. The image features {argument name="lighting" default="cinematic late afternoon lighting"}, casting soft shadows and highlighting the textures of the paper dress and the dry earth. Photorealistic, surreal fashion photography.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

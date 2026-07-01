@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A photorealistic, high-quality image of a {argument name="subject description" default="young Asian woman"} with long wavy brown hair, sitting precariously on top of an {argument name="landmark" default="ornate, colorful stone fruit finial spire of the Sagrada Familia"}. She is casually eating a {argument name="food item" default="hamburger"}, holding it with both hands near her mouth. She is wearing a {argument name="outfit" default="beige sleeveless wrap jumpsuit with a tie waist and metallic gold pointed-toe stiletto heels"}. The background features a breathtaking, slightly blurred aerial panoramic view of {argument name="background city" default="a dense European city resembling Barcelona"}, stretching out to the ocean under a clear blue sky. Cinematic lighting, surreal juxtaposition, highly detailed.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

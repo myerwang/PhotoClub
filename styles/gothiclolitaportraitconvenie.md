@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A photorealistic close-up portrait of a young Japanese woman wearing a {argument name="clothing style" default="black Gothic Lolita dress with floral embroidery and lace detailing"}. She has straight black hair with bangs and a {argument name="expression" default="neutral"} expression. On her head, she wears a {argument name="headwear" default="black lace headdress featuring cat ears and ribbons tied under her chin"}. The image is taken from a slightly high angle, resembling a selfie. The background is a slightly blurred street scene in front of a {argument name="background location" default="Japanese convenience store with a prominent blue and white LAWSON sign"}. Soft, overcast natural daylight illuminates her face, highlighting the intricate textures of the velvet and lace in her outfit.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

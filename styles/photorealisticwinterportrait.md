@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A photorealistic close-up portrait of a beautiful young woman with {argument name="hair style" default="long wavy blonde"} hair and striking blue eyes, looking directly at the viewer with a gentle, warm smile. She is dressed for cold weather, wearing {argument name="winter outfit" default="a white ribbed knit beanie with a pom-pom, a thick matching white turtleneck sweater, and a beige and brown plaid winter coat"}. Soft snowflakes are falling gently around her, with several flakes resting naturally on her hair, hat, and shoulders. The background is a softly blurred {argument name="background" default="snowy winter forest landscape"}. In the top left corner, there is a dark translucent rounded rectangle containing the white text "{argument name="overlay text" default="GPT Image-2"}".
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T06:26:49.522Z
 
 ## Source Prompt
 
-Eastern fantasy style female, half-body portrait, looking back over the shoulder in a side profile, with an ethereal and elegant temperament, soft divine beauty, delicate facial features, slightly downcast gaze, cool-white refined skin, subtle orange-pink makeup, and golden highlight accents. Long hair flowing in the wind, with colorful flowers and light particles woven into the hair strands, giving the hair a sense of movement and airiness. Wearing a semi-transparent silk gown and shawl, the fabric light and translucent, billowing in the breeze, with gilt textures and shimmering particles on the surface. The overall lighting is warm golden backlight with strong rim lighting, prominent volumetric light, floating light particles, soft glow and bloom, creating a dreamlike atmosphere. The background is a clean light-colored gradient with subtle glow and particle effects. The overall mood is ethereal, dreamlike, and sacred. Style: high-end CG illustration, ultra-fine detail, cinematic lighting, soft-light rendering, 8K detail.
+高端 CG 幻想肖像，轻盈丝质服装、鎏金纹理与漂浮粒子。 梦幻、神圣且超精细的柔光渲染。 半身侧面回眸，长发与轻纱随风流动。 暖金逆光、强轮廓光、体积光、柔和辉光和浅色渐变背景。
 
 ## Adaptation Log
 

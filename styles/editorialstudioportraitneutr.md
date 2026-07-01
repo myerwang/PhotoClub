@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A high-end studio fashion portrait of a {argument name="subject gender" default="woman"} in her mid-30s to early 40s with a naturally fit build, shown in a half-body to upper-thigh framing, standing in a relaxed, confident pose with both hands tucked into her pants pockets. She has long, dark chestnut-brown wavy hair parted near the center, softly cascading over her shoulders, and wears 2 small gold hoop earrings on one visible ear, a delicate gold necklace, and a thin bracelet. Her outfit is modern minimal casual streetwear in soft neutral tones: a light beige zip-front jacket worn open, a fitted white cropped tank top, and matching light beige drawstring jogger pants. Shoot at eye level with an 85mm portrait lens at f/2.8, keeping the subject tack sharp with shallow depth of field. Use professional studio lighting with 1 softbox key light from the front-left, subtle fill to soften shadows, and 1 gentle warm rim light along the hair and shoulder for separation. The background is a clean studio backdrop with a smooth taupe-to-warm-gray neutral gradient and no distractions. The image should feel highly realistic and editorial, with natural skin tones, balanced color grading, ultra-high detail, crisp fabric texture, soft natural shadows, no noise, no motion blur, no cartoon styling, and no anatomical distortions.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

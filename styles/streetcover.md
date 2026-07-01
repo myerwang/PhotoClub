@@ -11,8 +11,7 @@ retrieved_at: 2026-06-19T06:31:22.135Z
 
 ## Source Prompt
 
-vertical streetwear magazine cover template, in a warm chocolate brown color palette. The layout includes one large, high-fashion main portrait at the top and two smaller, candid polaroid-style photos layered at the bottom with torn-paper edges. The entire composition is covered in a distressed, vintage overlay with textured paper scratches. It features bold vertical Japanese typography on the left, a barcode in the top right corner, and various graphic design elements like stamps,technical text
-snippets, and grunge borders, creating a cohesive Japanese street-culture aesthetic.
+采用source prompt明确给出的摄影或视觉处理、环境、材质和后期质感，不增加来源之外的风格元素。 Use the source-defined 景别、机位、人物动作和环境布局；人物属性、人数与组合由当前任务决定。 Use the source-defined 照明方式、色彩关系、曝光和成像质感。
 
 ## Adaptation Log
 

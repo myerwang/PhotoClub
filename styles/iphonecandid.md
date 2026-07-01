@@ -11,10 +11,7 @@ retrieved_at: 2026-06-19T06:34:49.525Z
 
 ## Source Prompt
 
-I want to see what you really look like.
-Draw a snapshot of your everyday life as if it were accidentally taken on an iPhone.
-Make it feel like a very ordinary, imperfect candid shot.
-The photo should have slight motion blur, with uneven, natural lighting.
+采用来源案例 383“Imperfect iPhone Candid”明确给出的摄影或视觉处理、环境、材质和后期质感，不增加来源之外的风格元素。 Use the source-defined 景别、机位、人物动作和环境布局；人物属性、人数与组合由当前任务决定。 Use the source-defined 照明方式、色彩关系、曝光和成像质感。
 
 ## Adaptation Log
 

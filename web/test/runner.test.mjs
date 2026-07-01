@@ -129,6 +129,17 @@ test('builds final jobs from every selected profile and session prompt only', ()
   assert.match(prompt, /one\.png/);
   assert.match(prompt, /two\.png/);
   assert.match(prompt, /每个人只能对应自己的多视图参考/);
+  assert.match(prompt, /身份一致性硬要求/);
+  assert.match(prompt, /不能只是相似/);
+  assert.match(prompt, /通用模特脸/);
+  assert.match(prompt, /禁止参照人物设定中的服饰/);
+  assert.match(prompt, /严格使用 style 的服饰语言/);
+  assert.match(prompt, /不得替换、弱化、重解释/);
+  assert.match(prompt, /最适合该照片风格的服饰/);
+  assert.match(prompt, /style_id、文件名和文件路径只是内部标识/);
+  assert.match(prompt, /不得从标识里的 woman、girl、man、group/);
+  assert.match(prompt, /Source Prompt 只作为来源记录/);
+  assert.match(prompt, /最终照片必须保留足够清晰可见的人脸/);
   assert.doesNotMatch(prompt, /input\/mama/);
 });
 

@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A realistic street photography image in India, vertical composition, showing the exact rear view of a black-and-yellow auto rickshaw centered in frame on a narrow busy market street. The camera is positioned low and directly behind the vehicle, creating a strong symmetrical composition with the rickshaw filling most of the image. The top yellow canopy has bold uppercase red text reading {argument name="top text" default="AB TO PEECHHAA CHHOD DO MERA"}. The back panel below the window is black with large bold uppercase white text in 3 stacked lines reading {argument name="bottom text" default="ITNI BHI SUNDAR NAHI HU MAIN"}. In the rear window there is a printed portrait of a glamorous woman with long dark brown hair, turned sideways with one bare shoulder visible and a black strap, styled like a poster behind the glass; her face appears obscured or blurred. Show 2 rectangular rear tail lights, one on each side, a worn metal bumper, mud flaps, scuffed paint, dirt, scratches, and realistic age on the vehicle. The street background contains market shops, signboards, pedestrians on both sides, and a few distant figures, but kept softly blurred with shallow depth of field so the rickshaw remains sharp. Warm daylight, realistic Indian urban atmosphere, natural colors, subtle cinematic bokeh, high detail textures, documentary street-photo realism, 4K ultra-realistic.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

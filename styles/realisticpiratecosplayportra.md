@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A highly realistic, professionally retouched photograph of a female cosplayer dressed as {argument name="character" default="Miss Fortune from League of Legends"}. She has a {argument name="facial features" default="French woman's face"} with subtle makeup, green eyes, and long, voluminous wavy {argument name="hair color" default="red"} hair. Her detailed pirate costume features a weathered black tricorn hat with gold filigree, a black leather corset with a deep neckline and gold accents, white ruffled off-the-shoulder sleeves, and a wide brown leather belt. She holds a large, ornate {argument name="prop" default="flintlock pistol"} with brass detailing in her right hand. The background shows the wooden masts and rope rigging of a sailing ship under a bright blue sky. The cinematic, natural lighting highlights the rich textures of leather, metal, and skin, creating a photorealistic editorial portrait.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

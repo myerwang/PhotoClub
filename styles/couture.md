@@ -11,43 +11,7 @@ retrieved_at: 2026-06-19T06:34:49.525Z
 
 ## Source Prompt
 
-Create a hyper-realistic luxury fashion portrait inspired by premium fashion-week editorials.
-
-IMPORTANT:
-Generate ONLY ONE SINGLE VERTICAL IMAGE.
-
-STYLE:
-Luxury fashion realism.
-Professional couture photography.
-Premium editorial atmosphere.
-
-MAIN CONCEPT:
-A beautiful adult Asian fashion model photographed inside a luxury hotel suite.
-
-OUTFIT:
-Elegant black couture mini dress.
-Luxury embroidered details.
-Premium designer fashion aesthetic.
-
-BACKGROUND:
-Luxury hotel interior.
-Soft neutral decor.
-Elegant cinematic depth blur.
-
-LIGHTING:
-Soft luxury window lighting.
-Professional fashion-editorial reflections.
-Natural skin texture.
-
-MOOD:
-Bold.
-Elegant.
-High-fashion energy.
-
-QUALITY:
-Ultra realistic native 4K HDR realism.
-Professional magazine quality.
-Vertical 9:16.
+采用来源案例 492“Hotel Couture Portrait”明确给出的摄影或视觉处理、环境、材质和后期质感，不增加来源之外的风格元素。 Use the source-defined 景别、机位、人物动作和环境布局；人物属性、人数与组合由当前任务决定。 Use the source-defined 照明方式、色彩关系、曝光和成像质感。
 
 ## Adaptation Log
 

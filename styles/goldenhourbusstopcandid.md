@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A candid, ultra-realistic street photo of a young East Asian woman standing at a city bus stop during golden hour, viewed from slightly behind other waiting passengers so the composition feels naturally obstructed and documentary-like. She stands near the center-right of the frame, looking down at a smartphone in her hands, with long straight dark brown to black hair glowing with warm backlight from the low sun behind her. She wears a white T-shirt, an oversized pale blue button-up shirt left open, and loose cream or off-white high-waisted pants or a long skirt, with a canvas tote bag over one shoulder. Her posture is relaxed and absorbed in her phone. The scene includes exactly 2 blurred foreground figures framing her: 1 large out-of-focus figure with long hair on the left edge and 1 dark-shirted shoulder and back on the right edge. Behind her is a glass bus shelter panel reflecting trees and sunlight, and on the far right is a vertical bus route board showing exactly 4 route numbers: 622, 648, 686, and 740, with Chinese transit timetable styling. The lighting is warm, soft, and strongly backlit, creating rim light around her hair and a sun-drenched late-afternoon atmosphere. Use a smartphone photo aesthetic, shallow depth of field, natural color, realistic skin and fabric texture, urban everyday life in China, portrait orientation, subtle lens flare, and an unposed slice-of-life mood.
+Create a golden-hour candid portrait at or near a bus stop using the selected person's identity. Use warm low sun, realistic street details, transit signage or shelter elements without readable brand dependence, casual documentary framing, natural pose, shallow depth of field, and believable smartphone or 35mm candid-photo texture.
 
 ## Adaptation Log
 
@@ -20,15 +20,17 @@ A candid, ultra-realistic street photo of a young East Asian woman standing at a
 
 ## Visual Rules
 
-- 采用来源 prompts.json 条目 15992“Golden Hour Bus Stop Candid”明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。
+- Golden-hour public-transit candid style: warm low sunlight, urban bus stop context, realistic street background, soft bokeh, natural textures, and spontaneous documentary feeling.
+- Keep the face visible and identity-consistent; do not let backlight, hair, signage, passing vehicles, or foreground objects block the face.
 
 ## Composition
 
-- 采用来源提示词明确指定的景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。
+- Use a medium or full-body candid crop with the head and face fully inside the frame and large enough to verify identity.
+- Use only selected subjects; bystanders may be background-only and out of focus.
 
 ## Lighting And Color
 
-- 采用来源提示词明确指定的光源、色温、曝光、色彩关系和相机或胶片质感。
+- Warm golden-hour light, soft rim highlights, natural skin exposure, mild film grain or smartphone realism, and gentle urban color contrast.
 
 ## Subject Boundary
 

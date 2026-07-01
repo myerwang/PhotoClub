@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T10:51:27.819Z
 
 ## Source Prompt
 
-Documentary 35mm film photograph at first light inside a covered Tokyo wholesale fish market, cold blue dawn spilling through high warehouse windows mixed with the warm tungsten glow of hanging work lamps, faint mist rising from crushed ice in the air, candid waist-up shot of a fishmonger in his 50s wearing a rubber apron and a knit cap, weathered hands, deep smile lines, natural ruddy skin with visible pores and grey stubble, steam curling from a paper cup of tea on the counter beside him, blurred rows of styrofoam crates and a hand-painted price board behind him, authentic halation around the lamps, soft film grain, honest reportage tone, no plastic skin, no beauty retouch, no watermark, no added text overlay
+采用来源卡片 41“Tokyo fish market candid”明确给出的摄影媒介、环境质感、服装语言和后期处理。 Use the source-defined 景别、机位、动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 自然光、环境光、混合色温、曝光与胶片或手机成像质感。
 
 ## Adaptation Log
 

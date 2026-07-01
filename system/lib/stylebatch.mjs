@@ -1,6 +1,8 @@
 import { access, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { sanitizeStyleSourcePrompt } from './styleprompt.mjs';
+
 const RESULT_STATUSES = new Set(['accepted', 'rejected', 'blocked', 'no-prompt']);
 const STYLE_ID = /^[a-z0-9]+$/;
 
@@ -167,7 +169,8 @@ function validateStyle(style) {
 }
 
 function renderStyle(style, result, checkedAt) {
-  return `---\nstyle_id: ${style.id}\nname: ${style.name}\nsource_url: ${result.url}\nsource_title: ${oneLine(result.title)}\nsource_result: ${result.rank}\nretrieved_at: ${checkedAt}\n---\n\n# Style: ${style.englishName}\n\n## Source Prompt\n\n${style.sourcePrompt}\n\n## Adaptation Log\n\n${bulletList(style.adaptations)}\n\n## Visual Rules\n\n${bulletList(style.visualRules)}\n\n## Composition\n\n${bulletList(style.composition)}\n\n## Lighting And Color\n\n${bulletList(style.lighting)}\n\n## Subject Boundary\n\n- Apply \`system/rules/style_base.md\`.\n- This style defines visual treatment only and does not restrict subject identity, attributes, count, or combinations.\n`;
+  const sourcePrompt = sanitizeStyleSourcePrompt(style.sourcePrompt, style);
+  return `---\nstyle_id: ${style.id}\nname: ${style.name}\nsource_url: ${result.url}\nsource_title: ${oneLine(result.title)}\nsource_result: ${result.rank}\nretrieved_at: ${checkedAt}\n---\n\n# Style: ${style.englishName}\n\n## Source Prompt\n\n${sourcePrompt}\n\n## Adaptation Log\n\n${bulletList(style.adaptations)}\n\n## Visual Rules\n\n${bulletList(style.visualRules)}\n\n## Composition\n\n${bulletList(style.composition)}\n\n## Lighting And Color\n\n${bulletList(style.lighting)}\n\n## Subject Boundary\n\n- Apply \`system/rules/style_base.md\`.\n- This style defines visual treatment only and does not restrict subject identity, attributes, count, or combinations.\n`;
 }
 
 export async function applyResult(rootDir, payload, { now = () => new Date() } = {}) {

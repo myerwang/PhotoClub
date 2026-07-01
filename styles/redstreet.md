@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T06:31:22.135Z
 
 ## Source Prompt
 
-Create a bold, high-contrast black and white portrait of a confident young man wearing a black leather jacket, facing slightly sideways with an intense expression. Use dramatic studio lighting with sharp shadows and detailed skin texture. Add strong red graphic elements over the image, including a horizontal red bar across the eyes, geometric shapes, thin lines, and framing boxes. Incorporate large bold typography, repeated faded text, and a motivational headline in bright red. The design should feel like a premium sports or streetwear campaign poster with a minimal textured grey background and black/white/grey/red palette only.
+Create a black-and-red streetwear portrait using the selected person's identity. Use urban street context, bold red accents against dark clothing or environment, gritty fashion photography, realistic textures, dynamic pose, and high-contrast street editorial finish.
 
 ## Adaptation Log
 
@@ -20,15 +20,17 @@ Create a bold, high-contrast black and white portrait of a confident young man w
 
 ## Visual Rules
 
-- 采用来源“Black Red Streetwear”提示词明确给出的摄影或视觉处理、环境、材质和后期质感，不增加来源之外的风格元素。
+- Black-and-red streetwear treatment: urban wall or street background, dark wardrobe language with red accents when wardrobe is not otherwise specified, gritty realistic texture, and bold fashion contrast.
+- Preserve the selected face; do not add masks, heavy shadows, or graphic overlays across identity-critical facial areas.
 
 ## Composition
 
-- 采用来源提示词明确指定的景别、机位、人物动作和环境布局；人物属性、人数与组合由当前任务决定。
+- Use a medium, three-quarter, or full-body street-fashion crop with the full face visible.
+- Use only selected primary subjects; no duplicate streetwear models.
 
 ## Lighting And Color
 
-- 采用来源提示词明确指定的照明方式、色彩关系、曝光和成像质感。
+- High-contrast street light, red-black color relationship, mild grain, crisp fabric texture, and realistic urban exposure.
 
 ## Subject Boundary
 

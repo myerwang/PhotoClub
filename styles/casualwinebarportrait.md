@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A photorealistic, casual smartphone photo of a young woman with {argument name="hair style and color" default="long blonde balayage hair"} sitting at a table in a {argument name="setting" default="wine bar"}. She is wearing a {argument name="outfit" default="dark brown leather blazer"}. She is resting her chin on her right hand, which has a simple gold ring, and making a {argument name="expression" default="playful pursed-lip expression while looking off to the side"}. In the foreground on the white tablecloth, there is a water glass and a {argument name="drink" default="large wine glass containing red wine"}. The background features brightly illuminated modern shelving fully stocked with various wine bottles. Warm, inviting indoor lighting.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

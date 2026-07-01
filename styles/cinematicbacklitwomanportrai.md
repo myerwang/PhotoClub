@@ -1,17 +1,17 @@
 ---
 style_id: cinematicbacklitwomanportrai
-name: Cinematic Backlit Woman Portrait
+name: Cinematic Backlit Portrait
 source_url: https://github.com/gpt-image2/awesome-gptimage2-prompts
 source_title: gpt-image2/awesome-gptimage2-prompts
 source_result: 34
 retrieved_at: 2026-06-19T11:04:59.421Z
 ---
 
-# Style: Cinematic Backlit Woman Portrait
+# Style: Cinematic Backlit Portrait
 
 ## Source Prompt
 
-A cinematic vertical portrait of the provided subject shown from the chest up in a close half-body composition, positioned slightly right of center, with the body turned to the right and the head turned back toward the camera in a restrained over-the-shoulder pose. Use loose wind-swept hair movement when compatible with the provided identity reference, with strands lifting outward and sweeping through the air around the face and shoulders without covering identity-critical facial structure. The visible styling is elegant and minimal: a dark thin-strap slip dress or camisole exposing the shoulder line, collarbone, and upper back, with a sheer black off-shoulder wrap or translucent outer layer slipping down the arms to create a soft dark framing shape around the lower body. The mood is cold, quiet, mysterious, and wistful, with high-fashion cinematic realism rather than glamour polish. Use dramatic backlighting from the upper left, creating a bright halo along the hair, shoulder, and edge of the body, while the front of the figure keeps soft readable fill light for identity consistency. The background is a dark gray to near-black empty space with 2 clear environmental elements: floating dust-like particles and soft circular bokeh light spots scattered mostly on the left side and around the hair. Overall color grading is low saturation with cool blue-gray shadows and slightly warm skin tones for subtle warm-cool contrast. Add diffused bloom, misty atmosphere, faint film grain, soft vignette, and shallow depth of field. Keep the face readable and identity-consistent, avoid hard frontal light, avoid bright busy background details, avoid cartoon styling, avoid oversharpening, and avoid plastic skin texture.
+Create a cinematic backlit portrait with the selected person's full face visible and identity-preserved. Use a dark minimal studio or atmospheric background, strong rim light from behind or upper side, soft readable frontal fill, low-saturation cinematic color, subtle haze or bloom, shallow depth of field, and refined editorial realism.
 
 ## Adaptation Log
 
@@ -20,15 +20,18 @@ A cinematic vertical portrait of the provided subject shown from the chest up in
 
 ## Visual Rules
 
-- 采用来源 prompts.json 条目 14454“Cinematic Backlit Woman Portrait”明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。
+- Cinematic backlit editorial portrait treatment: dark restrained background, visible rim glow around hair and shoulders, atmospheric haze, subtle bloom, shallow depth of field, and realistic photographic texture.
+- Keep the selected person's face fully readable; backlight, hair movement, haze, or shadow must not hide or crop identity-critical facial areas.
 
 ## Composition
 
-- 采用来源提示词明确指定的景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。
+- Frame as a close to medium portrait with the full head and face inside the image, enough headroom, and a calm editorial pose.
+- Use only the selected subject count; do not add extra people or convert the subject into a fixed template.
 
 ## Lighting And Color
 
-- 采用来源提示词明确指定的光源、色温、曝光、色彩关系和相机或胶片质感。
+- Use dramatic rear or side-back key light plus gentle frontal fill so the face remains identifiable.
+- Low saturation, cool shadows, restrained warm highlights, soft bloom, faint film grain, and realistic skin texture.
 
 ## Subject Boundary
 

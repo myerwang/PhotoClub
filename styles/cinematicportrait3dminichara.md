@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-An ultra-realistic cinematic portrait of a {argument name="subject" default="woman"} from a photo, fully preserving her facial features, natural skin texture, realistic hair strands, and simple everyday clothing. The woman holds a small 3D miniature of herself in the palm of her hand. She looks at the miniature with obvious surprise and slight pleasure, with raised eyebrows, a soft smile, and expressive eyes. Her facial expression appears spontaneous and authentic. The miniature version is very similar to this woman in facial structure, hairstyle, and clothing, but is rendered in a smooth, high-quality {argument name="style" default="3D cartoon style"}. The miniature features a disproportionately large cartoon head and an exaggerated, playful expression. Both characters are dressed in the same casual attire—a {argument name="clothing" default="patterned sweater"} with accurate color scheme and fabric texture. The difference in scale is obvious and visually playful. The lighting is professional cinematic, with clear object separation, soft highlights on the skin, and subtle contour lighting around both figures. Ultra-detailed textures for a real person. Clean, realistic 3D textures for the miniature. Balanced realism.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

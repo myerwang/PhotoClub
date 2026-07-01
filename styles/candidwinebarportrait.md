@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A candid, photorealistic portrait of a young woman with {argument name="hair color" default="long blonde hair"} wearing a {argument name="outfit" default="dark brown leather blazer"}. She is sitting at a table in a {argument name="setting" default="restaurant or wine bar"}, resting her chin on her hand and looking off to the side with {argument name="expression" default="pursed lips"}. In front of her on the white tablecloth are two glasses: a large glass of {argument name="drink" default="red wine"} and a smaller glass of water. The background features brightly lit, modern shelving filled with rows of wine bottles. Warm, ambient lighting, shot on a smartphone.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

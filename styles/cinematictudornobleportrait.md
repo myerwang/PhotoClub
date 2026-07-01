@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-{argument name="人物" default="フォトポートレート、チューダー風の少年貴族"}。淡い金髪、中性的な顔立ち、静かな眼差し。{argument name="服装" default="黒い羽根帽、宝石刺繍の黒衣装、白いレース襟、毛皮縁マント"}。{argument name="場所" default="ゴシック大聖堂内部、石柱とステンドグラス"}、柔らかな自然光、荘厳な雰囲気、超高精細、映画的ライティング。
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

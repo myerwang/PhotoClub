@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:00:46.313Z
 
 ## Source Prompt
 
-A minimalistic, highly emotional Japanese movie poster for "Love Letter" (情書). The upper half features a close-up photograph of Hiroko, eyes closed, looking up toward a distant snow-covered hill, lit by diffused, nostalgic natural light. The primary title uses 99.2% accurate Japanese kanji and typography across the center: "情書" (Large, stylized vertical font) with "Love Letter" (Smaller English text) directly below it. Precise smaller text in the bottom left reads "1995 岩井俊二 監督作品" (A film by Shunji Iwai, 1995). A textured sepia and blue color palette with golden accents. Dynamic grid layout, 2K resolution clarity, perfect kerning, professional print aesthetic.
+采用来源代码块 5 明确给出的高保真摄影、版式结构、材质和印刷视觉。 Use the source-defined 人物与服装分解网格，或上半部人物近景和下部标题区；人物属性、人数与组合由当前任务决定。 采用来源提示词指定的柔和自然光、怀旧漫射光或服装目录棚拍光，以及克制的年代色彩。
 
 ## Adaptation Log
 

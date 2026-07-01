@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-Using the provided reference image, transform the casual poolside selfie into a clean professional head-and-shoulders studio portrait. Keep the same person and the same polo shirt, but remove the outdoor resort background, other people, furniture, pool, and all vacation context. Reframe to a centered portrait crop with the subject facing the camera, shoulders visible, and the selfie angle corrected into a formal straight-on composition. Add a smooth dark teal studio backdrop with subtle vignetting and soft, flattering portrait lighting for a polished corporate profile-photo look.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

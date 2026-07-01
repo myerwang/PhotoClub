@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:00:46.313Z
 
 ## Source Prompt
 
-An ultra-high-resolution 2K Japanese Kimono flat-lay disassembly diagram (Outfit Disassembly). The primary subject is a formal silk Kimono (和服) with traditional wave patterns, worn by a elegant Japanese woman. A single vertical line divides the image. Left: A high-fidelity photograph of the woman in full Kimono ensemble. Right: A multi-column grid with labeled, separated components featuring 99.2% correct vertical text (both English and Japanese):Minimalist vector illustration style, smooth fabric textures, precise kerning, dynamic light flow, clean grid divisions, high-fidelity professional educational poster aesthetic. All labels are horizontally and vertically aligned.
+采用来源代码块 1 明确给出的高保真摄影、版式结构、材质和印刷视觉。 Use the source-defined 人物与服装分解网格，或上半部人物近景和下部标题区；人物属性、人数与组合由当前任务决定。 采用来源提示词指定的柔和自然光、怀旧漫射光或服装目录棚拍光，以及克制的年代色彩。
 
 ## Adaptation Log
 

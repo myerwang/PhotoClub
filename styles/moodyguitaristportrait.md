@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-Preserve the face, proportions, and external features of the model as in the reference. {argument name="subject" default="8-year-old boy"} in a dark, moody studio rehearsal hall. Dramatic rim lighting and a single overhead spotlight creating a silhouette effect. He holds a {argument name="instrument" default="silver electric guitar"} with visible metallic string textures. Motion blur from a strobe light effect, high-contrast, commercial magazine shoot, fashion editorial realism, intense focused expression.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

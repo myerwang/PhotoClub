@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A close-up candid portrait of a {argument name="subject" default="young woman"} indoors against a muted beige wall, shot in a 1990s disposable camera snapshot style. She has pale skin, a soft understated smirk, and loose {argument name="hair color" default="black"} hair with natural volume, slightly messy waves, and face-framing strands spreading around her shoulders. She wears a {argument name="top color" default="faded mauve"} oversized sweatshirt with a relaxed fit and softly gathered sleeves. The framing is chest-up and slightly off-center at eye level, with her body angled casually and one arm subtly extending forward as if taking the photo herself. Use direct on-camera flash for flat shadows, a dim ambient room, visible but subtle film grain, soft edge falloff, and a nostalgic casual vibe. The wall behind her is decorated with exactly 8 taped paper items: 4 instant photos, 2 concert flyers, 1 handwritten note, and 1 small dark photo print. One flyer references {argument name="band name" default="SONIC YOUTH"}, another references {argument name="second band name" default="NIRVANA"}. The overall image should feel intimate, imperfect, slightly grainy, and authentically analog.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

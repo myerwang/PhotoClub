@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T06:31:22.135Z
 
 ## Source Prompt
 
-Ultra-realistic photo of a woman seated on stone steps in a vibrant Mediterranean alley with vivid blue-painted walls, stairs, and buildings with white accents. She wears a blue fitted sleeveless top and a long flowing white skirt, barefoot, with a calm relaxed expression and eyes slightly downward. Long wavy hair falls naturally over her shoulders. Strong natural sunlight creates high contrast shadows and saturated colors. Shot from a slightly low front-facing angle with full body framing, sharp focus on subject against a detailed background of blue walls, hanging patterned fabric, small windows, and plants above. Highly saturated blues contrasted with natural white and skin tones, ultra-realistic textures, crisp shadows, realistic depth.
+采用source prompt明确给出的摄影或视觉处理、环境、材质和后期质感，不增加来源之外的风格元素。 Use the source-defined 景别、机位、人物动作和环境布局；人物属性、人数与组合由当前任务决定。 Use the source-defined 照明方式、色彩关系、曝光和成像质感。
 
 ## Adaptation Log
 

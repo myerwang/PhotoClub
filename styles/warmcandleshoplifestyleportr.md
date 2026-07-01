@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A candid, photorealistic vertical smartphone photo of a young woman shopping in a cozy candle and home fragrance store, shot from a slightly elevated angle looking down at her upper body and torso. She has {argument name="hair color" default="dark brown to black"} hair tied back in a low ponytail with a soft side part and a few loose strands near the ears. Her face is mostly hidden by the framing and by the cup she is holding near her mouth, creating an anonymous lifestyle-photo feel. She wears a fitted ribbed zip-front top in {argument name="outfit color" default="chocolate brown"}, partially unzipped into a deep neckline, paired with matching high-waisted pants in the same brown tone for a monochrome look. In one hand she holds 1 small cream-colored takeaway cup with a simple brown sleeve or label. The setting is a warmly lit boutique with rustic wooden shelves packed with many glass jar candles and containers; visible are multiple rows of neutral-toned jars in white, beige, gray, amber, and dark brown, softly blurred in the background and along the left side of the frame. Use warm indoor lighting, shallow depth of field, realistic skin texture, glossy dark hair, subtle natural makeup, and a casual shopping pose with one arm bent holding the cup and the body angled slightly toward the camera. Emphasize an intimate lifestyle fashion aesthetic, soft bokeh, rich earthy tones, and a narrow portrait composition from head to upper thighs.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

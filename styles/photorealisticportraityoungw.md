@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A photorealistic, high-quality portrait of a beautiful young {argument name="nationality" default="Japanese"} woman. She has {argument name="hair style" default="long black wavy hair with bangs"}, dark brown eyes, fair skin, and a {argument name="expression" default="gentle smile"} while looking directly at the camera. She is wearing a {argument name="clothing" default="simple white blouse"}. The image features soft, flattering portrait lighting and a shallow depth of field, set against a {argument name="background" default="blurred warm indoor setting"} with beautiful bokeh. Shot on an 85mm lens, highly detailed.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

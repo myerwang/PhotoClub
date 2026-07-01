@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A cinematic photograph of an {argument name="subject" default="elderly Asian woman"} sitting in a dimly lit kitchen, looking out a square window at a {argument name="window view" default="calm ocean with a distant island"} during {argument name="time of day" default="twilight"}. She is viewed in profile, holding 1 clear glass. She sits at a small table with 1 silver thermos and 1 bowl of dark fruit. There are 2 wooden chairs at the table, one occupied by the woman and the other draped with a dark cloth. The interior is in deep shadow, featuring 1 metal kettle on the left counter, and 1 round wall clock, 1 hanging net bag, and 1 light switch on the right wall. Small seashells line the window sill. The atmosphere is {argument name="mood" default="contemplative and quiet"}, with soft natural light from the window illuminating her face against the dark room.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

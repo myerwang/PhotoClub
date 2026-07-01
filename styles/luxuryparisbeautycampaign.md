@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A luxurious high-fashion beauty campaign photograph in a sunlit Parisian marble bathroom, featuring an elegant woman in a sheer ivory silk robe leaning with folded arms on a polished marble counter. Her dark brown hair is styled in a loose, romantic updo with soft wisps around the neck. The mood is serene, refined, and ultra-premium. On the left, a tall window reveals a softly blurred view of the Eiffel Tower and Paris rooftops in warm morning light. On the right side of the counter sits 1 glass vase filled with white roses and 1 luxury skincare serum bottle with a gold dropper cap, positioned prominently like a prestige product ad. The room includes cream and gray veined marble walls, gold fixtures, a mirror, and glowing wall sconces. Use soft golden natural light, airy highlights, subtle reflections, shallow depth of field, cinematic editorial composition, realistic skin and fabric textures, understated French elegance, beauty advertising aesthetic, photorealistic luxury lifestyle imagery.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

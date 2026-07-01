@@ -11,10 +11,7 @@ retrieved_at: 2026-06-19T06:34:49.525Z
 
 ## Source Prompt
 
-A candid photograph of a young woman standing on a Shanghai metro platform during the summer morning commute, authentic daily life photography, natural candid moment. Half-body framing, shot at eye level from moderate distance — the arriving train a motion-blurred streak behind her, the yellow safety line at her feet.
-East Asian young woman in her early 20s. Almond-shaped eyes with natural double eyelids, slightly elongated eye corners — eyes directed downward, absorbed. Straight refined nose with a delicate bridge. Skin tone fair to light beige (NC10–NC20) — skin subsurface scattering visible under cool overhead station light, specular micro-highlights on cheekbones and nose ridge, fine foundation powder grain perceptible. Summer fresh look, no heavy coverage, lightly tinted lip.
-She wears a relaxed oversized white shirt dress, collar lightly open, sleeves loosely rolled above the elbow. A structured natural tan canvas tote hangs from her shoulder, a physical novel tucked under one arm — pages open at a saved page. She stands with her weight on one hip, gaze downward at the open book, entirely absorbed, occupying her own stillness inside the morning rush. Background: white and grey tiled metro wall, overhead route signage board, arriving train motion blur to one side, other commuters blurred and distant. Two or three stray hairs displaced by the train's air displacement on arrival, natural unplanned imperfection, not geometrically symmetrical.
-Cool overhead fluorescent lighting with a slight greenish cast, flat frontal illumination offset by a warm spill from the platform entrance behind. Absorbed in focus, eyes downward, unaware — a private moment inside a public space, the Shanghai morning. Subtle ISO 400 film grain in shadow areas, photographic noise texture not CG render smoothness. Aspect ratio 2:3. No watermark, no text overlay, not cartoon, not digitally painted, not illustration, not anime.
+Create a metro morning portrait using the selected person's identity. Use a train platform, subway carriage, or station corridor with morning commute atmosphere, practical transit lighting, realistic reflections, muted city colors, shallow depth of field, and candid documentary realism.
 
 ## Adaptation Log
 
@@ -23,15 +20,17 @@ Cool overhead fluorescent lighting with a slight greenish cast, flat frontal ill
 
 ## Visual Rules
 
-- 采用来源案例 472“Metro Morning Portrait”明确给出的摄影或视觉处理、环境、材质和后期质感，不增加来源之外的风格元素。
+- Metro morning portrait treatment: transit architecture, platform or carriage details, commuter atmosphere, realistic reflections, and quiet documentary mood.
+- Keep the selected person's full face visible; train doors, poles, transit motion cues, reflections, or crowds must not cover, soften, distort, or replace the face.
 
 ## Composition
 
-- 采用来源提示词明确指定的景别、机位、人物动作和环境布局；人物属性、人数与组合由当前任务决定。
+- Use a medium or three-quarter portrait crop with the subject clearly separated from the transit background.
+- Use only selected subjects as primary subjects; background commuters must be incidental and visually secondary.
 
 ## Lighting And Color
 
-- 采用来源提示词明确指定的照明方式、色彩关系、曝光和成像质感。
+- Cool-to-neutral station light mixed with soft morning warmth, mild film grain, realistic exposure, and subdued urban color.
 
 ## Subject Boundary
 

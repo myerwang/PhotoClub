@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-Using the provided reference image, turn this candid train photo into a clean professional studio head-and-shoulders portrait of the same person. Keep the same hairstyle, shirt-and-sweater outfit, and overall identity cues, but remove the headphones, train window reflection, table, thermos, book, and all travel context. Reframe the subject so he is centered and facing the camera in a neutral upright pose, cropped from mid-chest upward. Replace the background with a plain muted blue-gray studio backdrop and use soft even portrait lighting for a polished corporate profile photo.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

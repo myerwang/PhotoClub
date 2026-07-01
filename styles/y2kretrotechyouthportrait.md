@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A vibrant, high-contrast Y2K fashion photography shot of two young East Asian adults. In the foreground, a young woman smiles softly at the camera, wearing a {argument name="female headwear" default="fuzzy pink bucket hat"}, a pastel patchwork crop top, a white pleated mini skirt, and a beaded necklace, while holding a white smartphone. Her long dark hair is blowing slightly. Behind her to the right, a young man laughs excitedly with his mouth open, wearing a {argument name="male headwear" default="backward orange baseball cap"}, a bright blue windbreaker over a green t-shirt, light khaki pants, and a silver chain. He is holding two black smartphones, one in each hand, with one raised high in the air. The image features bright flash lighting, a slight wide-angle lens distortion, and a smooth gradient background transitioning from {argument name="background color" default="hot pink"} to white.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

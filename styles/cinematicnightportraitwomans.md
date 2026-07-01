@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A photorealistic portrait of a young Asian woman with a {argument name="hair style and color" default="short black bob haircut and bangs"}, seen in profile. She is {argument name="action" default="smoking a cigarette"}, holding it to her lips with her right hand, with a thin trail of blue smoke rising. She is {argument name="setting" default="leaning against a metal balcony railing at night"}. She wears a {argument name="clothing" default="white camisole and a light grey oversized cardigan that has slipped off her shoulder"}, exposing her bare shoulder and back. She has a small pearl earring. The background is dark with blurred, out-of-focus warm city lights. The image features a {argument name="aesthetic" default="cinematic, moody atmosphere with noticeable film grain and a direct flash photography aesthetic"}.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

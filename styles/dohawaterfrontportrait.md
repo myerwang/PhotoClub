@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-Create a hyper-realistic, cinematic portrait of a {argument name="subject" default="young woman"} sitting at a {argument name="location" default="luxury waterfront café in Doha"} during golden hour. Preserve the exact facial features, proportions, skin tone, and expression from the reference image with 100% accuracy. She is styled as an elegant Arabian woman, wearing a {argument name="outfit" default="black abaya with intricate gold embroidery"}, delicate jewelry, and a subtle head covering draped naturally. She is seated at a traditional outdoor majlis-style setting with patterned cushions, Arabic lanterns, and a wooden table. Her pose is calm and confident, resting her chin gently on her hand while looking directly at the camera. Background shows the Doha skyline and traditional wooden dhow boats along the waterfront, with warm sunset lighting reflecting on the water. No visible text, logos, or signage anywhere in the scene. Lighting: soft golden hour glow, cinematic highlights, warm tones, natural shadows on face. Camera: 85mm lens, shallow depth of field, ultra-detailed, 8K resolution, DSLR quality. Style: photorealistic, cinematic, luxury lifestyle photography, rich textures, highly detailed fabrics and skin.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

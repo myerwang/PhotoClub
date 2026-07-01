@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A photorealistic street style paparazzi shot of a young woman walking through a {argument name="setting" default="sunny parking lot"}. She has {argument name="hair color and style" default="blonde hair in a high ponytail"} and is wearing {argument name="accessory" default="black rectangular sunglasses"}. Her outfit consists of a matching {argument name="activewear color" default="grey"} long-sleeve crop top and high-waisted leggings, paired with chunky white sneakers and white crew socks. Over her left arm, she carries a light blue denim jacket, while holding a {argument name="held item" default="beige insulated water bottle"} and a smartphone in the same hand. The background is blurred with a shallow depth of field, showing the rear of a dark car on the left and out-of-focus buildings and trees in the distance, capturing a casual, candid athleisure aesthetic in bright daylight.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

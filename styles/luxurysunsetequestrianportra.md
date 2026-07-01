@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A cinematic, ultra-realistic golden-hour equestrian portrait of a {argument name="horse color" default="dark bay"} horse and a {argument name="rider gender" default="young man"} standing closely together in a quiet outdoor paddock at sunset. The horse is tall and elegant, shown from the chest up in three-quarter view, with a glossy coat, long dark mane, alert upright ears, and a black leather bridle and reins; part of an English saddle is visible on the left side of the frame. The rider wears a fitted {argument name="rider outfit" default="black long-sleeve riding shirt and black riding pants"}, standing on the right side of the horse, leaning in with one hand gently cupping the horse’s cheek and muzzle in a tender, intimate pose. Compose the image as a close portrait with the horse dominating the left half and the rider on the right, their faces nearly touching, emphasizing emotional connection and trust. Set the scene in a fenced field with softly blurred wooden rails, distant rolling hills, and a glowing orange sky with the sun low on the horizon. Use warm backlighting, rich amber highlights, realistic skin and fur texture, shallow depth of field, premium advertisement-style photography, natural shadows, high contrast, and a polished luxury editorial look. The overall mood should be affectionate, serene, and sophisticated, like a high-end lifestyle ad for equestrian fashion or horse care.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

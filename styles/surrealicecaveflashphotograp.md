@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A realistic image shot with {argument name="lighting style" default="harsh direct flash photography"} inside an {argument name="environment" default="ice cave made of large ice blocks and snow"}. A young man with messy dark curly hair sits on a brown fur pelt, leaning his head on his hand with a relaxed expression. He is wearing a {argument name="clothing" default="thick black and white patterned knit sweater"}, black snow pants, and black winter boots. Directly behind him, the rear half of a white {argument name="car model" default="Porsche 911 GT3 RS"} sports car is embedded into the snowy cave wall, with its red taillights illuminated and a license plate reading {argument name="license plate" default="VS 369 911"}. In the foreground, a rough wooden table dusted with snow holds exactly 2 stainless steel thermoses, 1 clear textured glass, 1 small metal cooking pot, and 1 yellow and blue matchbox. Resting on the icy floor to the right are 1 green glass bottle and 1 vintage metal lantern.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

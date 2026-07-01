@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A high-fashion studio portrait of a glamorous woman crouching low in a squat pose against a seamless light gray background, wearing a black long-sleeve deep-plunge mini dress and black pointed high heels. She has long, voluminous wavy dark brown hair, medium tan skin, dark red manicured nails, and large gold hoop earrings. A single large python with brown, tan, and black patterned scales is draped around her shoulders like a living stole, with its thick body looping down both sides of her torso and its head hanging at the center between her knees near her hands. The composition is centered and symmetrical, shot full body in a vertical frame, with clean editorial lighting, sharp detail on skin, fabric, and snake scales, minimal shadows, luxury fashion photography style, confident sensual pose, plain uncluttered background.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

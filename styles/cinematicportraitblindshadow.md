@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A photorealistic, cinematic portrait of a young East Asian woman sitting on a dark chair. She has shoulder-length bob hair with straight bangs colored {argument name="hair color" default="teal"}. She is wearing a {argument name="top clothing" default="navy blue tank top"} and {argument name="bottom clothing" default="light beige linen shorts"}. She is leaning slightly forward with her hands resting near her knees, looking directly at the camera with a {argument name="expression" default="neutral, calm"} expression. The scene features {argument name="lighting style" default="dramatic shadows from venetian blinds"}, casting distinct horizontal stripes of warm, golden light across her face, body, and the plain warm-toned wall behind her. A window with closed blinds is visible on the right side of the frame. High contrast, moody atmosphere, highly detailed.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

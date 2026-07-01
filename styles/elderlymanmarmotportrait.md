@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A photorealistic portrait of an {argument name="man description" default="elderly Asian man with thin wire-rimmed glasses"} wearing a {argument name="man attire" default="black double-breasted suit with a white shirt and black tie"}. He has a gentle, warm smile and is standing closely next to a {argument name="animal" default="large fluffy marmot"}. The animal is standing upright, resting its front paws on a textured wooden log. The background features a {argument name="setting" default="rustic outdoor garden with blank wooden signs, a vintage lantern on a post, lush greenery, and small colorful flowers"}. The image features {argument name="lighting and style" default="soft natural lighting, high-quality photographic details, and a shallow depth of field creating a smooth bokeh effect in the background"}.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

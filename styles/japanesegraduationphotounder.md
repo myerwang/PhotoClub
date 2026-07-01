@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A soft, realistic Japanese graduation-day photo in the style of vintage film photography, showing 6 teenage schoolgirls standing together outdoors in front of a school gate under full-bloom cherry blossoms. They wear matching Japanese high school uniforms: navy blazers, white shirts, burgundy ribbon bows, gray-blue plaid pleated skirts, navy knee-high socks, and black loafers, each carrying a large navy school bag. The group stands close together on the road at the entrance, with relaxed celebratory body language and a candid class-photo feel. At least 5 of the girls are making peace signs near their faces, and one girl on the far right raises her hand in a playful salute-like pose. Emphasize natural, flattering leg shapes, neat straight dark hair with soft bangs, youthful styling, and believable proportions. The composition is front-facing and full-body, with the students centered slightly left and the school gate on the right. Include a tall black gate pillar with vertical gold Japanese text reading "桜花女子高等学校" and a white ceremonial signboard beside it with large Japanese text reading "卒業証書授与式" and smaller school-name text below. Background filled with pale pink sakura trees in bloom, shallow depth of field, soft pastel tones, gentle spring haze, overcast bright daylight, subtle film grain, muted contrast, and an understated nostalgic atmosphere like an old-fashioned commemorative photograph.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

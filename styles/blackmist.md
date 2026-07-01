@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T06:26:49.522Z
 
 ## Source Prompt
 
-9:16 vertical 鈥?editorial portrait, single subject. Soft black mist filter, subtle haze, gentle highlight bloom, muted tones. Minimal indoor space, clean background, slight texture. Young Korean woman, minimal makeup, natural skin texture. Outfit: fitted ribbed knit top or soft camisole layered under a loose shirt, paired with high-waisted shorts or skirt; fabric slightly clings to body shape, soft and natural. Hair: slightly messy, natural volume. Pose: sitting on floor with one leg bent and the other relaxed, body slightly leaning, shoulders not aligned, head tilted. Composition: subject slightly off-center, negative space present. Expression: calm, slightly distant, natural lips. Lighting: soft side light, gentle shadow falloff. Mood: understated, quiet, subtly sensual through natural body lines, relaxed and unposed. Quality: fine grain, slight softness, realistic look.
+黑柔焦滤镜、轻雾、柔和亮部泛光、低饱和色和细颗粒。 极简室内背景带轻微纹理，整体安静、松弛且写实。 人物略偏中心，保留负空间，坐姿自然不对称。 柔和侧光与平缓阴影衰减。
 
 ## Adaptation Log
 

@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { AppError } from './errors.mjs';
+import { sanitizeStyleSourcePrompt } from '../../system/lib/styleprompt.mjs';
 
 const STYLE_ID = /^[a-z0-9]+$/;
 
@@ -64,7 +65,8 @@ export function validateStyleDraft(value) {
 }
 
 export function renderUserStyle(style) {
-  return `---\nstyle_id: ${style.id}\nname: ${style.name}\nsource_type: user\n---\n\n# Style: ${style.englishName}\n\n## Source Prompt\n\n${style.sourcePrompt}\n\n## Adaptation Log\n\n${bullets(style.adaptations)}\n\n## Visual Rules\n\n${bullets(style.visualRules)}\n\n## Composition\n\n${bullets(style.composition)}\n\n## Lighting And Color\n\n${bullets(style.lighting)}\n\n## Subject Boundary\n\n- Apply \`system/rules/style_base.md\`.\n- This style defines visual treatment only and does not restrict subject identity, attributes, count, or combinations.\n`;
+  const sourcePrompt = sanitizeStyleSourcePrompt(style.sourcePrompt, style);
+  return `---\nstyle_id: ${style.id}\nname: ${style.name}\nsource_type: user\n---\n\n# Style: ${style.englishName}\n\n## Source Prompt\n\n${sourcePrompt}\n\n## Adaptation Log\n\n${bullets(style.adaptations)}\n\n## Visual Rules\n\n${bullets(style.visualRules)}\n\n## Composition\n\n${bullets(style.composition)}\n\n## Lighting And Color\n\n${bullets(style.lighting)}\n\n## Subject Boundary\n\n- Apply \`system/rules/style_base.md\`.\n- This style defines visual treatment only and does not restrict subject identity, attributes, count, or combinations.\n`;
 }
 
 export async function publishStyleDraft({ rootDir, stagingPath }) {

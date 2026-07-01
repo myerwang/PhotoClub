@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A photorealistic candid street photograph of {argument name="subject" default="a young Russian woman"} running toward the camera in a frantic late-for-school moment, holding one hand near her chest and with {argument name="prop" default="a slice of toast in her mouth"}. She wears {argument name="dress style" default="a light beige patterned flowing dress with long sleeves and a cinched waist"} and flat shoes, the skirt billowing with motion. Shot from an extreme low-angle worm's-eye perspective on a rough roadside in a modest urban neighborhood, making her appear tall against a huge uninterrupted {argument name="sky color" default="deep cobalt blue"} sky. Dense intersecting overhead power lines and utility poles crisscross the upper half of the frame, creating strong geometric tension. Use hard noon sunlight with crisp, dark shadows stretching across the dusty pavement. Include exactly 4 background pedestrians, slightly blurred and walking away or across the street, plus a few distant cars and low buildings lining both sides of the road. The composition should feel chaotic, youthful, cinematic, and frozen in motion, with a wide-angle lens, high-fidelity realism, subtle film grain, strong contrast, slightly nostalgic color rendering, and a {argument name="film look" default="Fujifilm Classic Negative"} aesthetic.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

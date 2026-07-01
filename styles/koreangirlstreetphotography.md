@@ -1,17 +1,17 @@
 ---
 style_id: koreangirlstreetphotography
-name: Korean Girl Street Photography
+name: Urban Street Photography
 source_url: https://github.com/gpt-image2/awesome-gptimage2-prompts
 source_title: gpt-image2/awesome-gptimage2-prompts
 source_result: 34
 retrieved_at: 2026-06-19T11:04:59.421Z
 ---
 
-# Style: Korean Girl Street Photography
+# Style: Urban Street Photography
 
 ## Source Prompt
 
-Street photography, sunlight, {argument name="subject" default="trendy Korean girl"}, 20s, {argument name="pose" default="squatting on the ground"}, strong perspective, Dynamic poses, low angle, shot with {argument name="camera" default="iPhone 17"}.
+Create an urban street-photography portrait using the selected person's identity. Use candid city sidewalk or street-corner context, natural daylight or soft city light, casual fashion appropriate to the scene when wardrobe is not specified, realistic background depth, and documentary photographic texture.
 
 ## Adaptation Log
 
@@ -20,15 +20,17 @@ Street photography, sunlight, {argument name="subject" default="trendy Korean gi
 
 ## Visual Rules
 
-- 采用来源 prompts.json 条目 15906“Korean Girl Street Photography”明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。
+- Urban street-photography treatment: candid city environment, practical street details, casual editorial styling, realistic lens depth, and natural documentary feel.
+- Do not impose ethnicity, age, gender, or a fixed street-model template. Preserve the selected person's face and selected subject count.
 
 ## Composition
 
-- 采用来源提示词明确指定的景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。
+- Use a medium, three-quarter, or full-body street portrait crop while keeping the full face large enough and unobstructed.
+- Background pedestrians may appear only as incidental blurred context.
 
 ## Lighting And Color
 
-- 采用来源提示词明确指定的光源、色温、曝光、色彩关系和相机或胶片质感。
+- Natural urban daylight or soft city lighting, realistic exposure, subtle film grain, balanced street colors, and believable skin tones.
 
 ## Subject Boundary
 

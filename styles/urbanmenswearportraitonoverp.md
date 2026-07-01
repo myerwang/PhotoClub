@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A natural-looking street fashion portrait of a {argument name="subject" default="young Japanese man"} standing on an urban pedestrian overpass in daylight, framed vertically from mid-thigh to head. He is leaning casually against a worn green metal railing with one hand in his coat pocket, body slightly angled, giving a relaxed but stylish candid pose rather than standing straight. He has medium-length wavy tousled hair in {argument name="hair color" default="dark brown"}, soft volume around the ears and forehead, and a slim build. Dress him in layered neutral-toned winter fashion: an oversized wool coat in {argument name="coat color" default="taupe beige"}, a chunky knit crewneck sweater in {argument name="sweater color" default="cream"}, and a long striped button-up shirt peeking out at the collar and hem. The mood is calm, refined, and contemporary, like a Japanese men's fashion editorial. Use soft natural sunlight with realistic skin tones, subtle shadows, muted colors, and shallow depth of field. In the background, show out-of-focus mid- and high-rise city buildings, bare winter trees, and a pale bright sky, creating a realistic Tokyo-like urban atmosphere. Photorealistic, understated color grading, detailed fabric texture, editorial composition, no dramatic effects, no text overlays, no extra people.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

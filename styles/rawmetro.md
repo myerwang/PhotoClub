@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T06:40:00.815Z
 
 ## Source Prompt
 
-Create a completely RAW quality, unprocessed, unedited image with full iPhone camera quality. A subway station in USA, a momentary blur. The subway is in motion. In front of the subway, there is an elderly woman and man.
+完全未经处理的 iPhone 原生照片质感。 地铁运动造成瞬间模糊，保留普通公共空间的偶然性。 美国地铁站，运动列车前的人物抓拍。 使用现场自然光，不添加棚拍修饰。
 
 ## Adaptation Log
 

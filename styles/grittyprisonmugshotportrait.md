@@ -11,44 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-{
-  "parameters": {
-    "aspect_ratio": "2:3",
-    "version": "6.0",
-    "style_type": "Realistic photograph, cinematic lighting, high detail, gritty texture"
-  },
-signature: “ XSydneyFan " in corner Cursive style
-  "subject_description": {
-    "demographics": "Beautiful young woman, fair skin.",
-    "hair": "Dark long length black hair, some strands falling over her forehead.",
-    "details": "Some smudges of black soot and dirt on her face, neck, and hand (not in much amount)."
-  },
-  "attire": {
-    "outerwear": "Bright orange prisoner jumpsuit (boiler suit), slightly oversized. Distressed and dirty, covered in black soot stains.",
-    "details": "The number '000' is printed in large black font on the right side of the chest.",
-    "under_layer": "Grey crew-neck t-shirt visible underneath.",
-    "accessories": "Silver rings on fingers."
-  },
-  "pose_and_expression": {
-    "stance": "Standing in a mugshot lineup stance. Making direct eye contact with the camera.",
-    "expression": "Deadpan, serious, nonchalant, looking unimpressed or bored.",
-    "right_hand_action": "Raised casually, fingers touching the hair behind her right ear/neck area.",
-    "left_hand_action": "Holding a black and white clapperboard/slate in front of her chest."
-  },
-  "props": {
-    "slate_board_content": {
-      "main_text": "🚫 ARRESTED 🚫 For illegally Money",
-      "date": "12-28 25-26"
-    }
-  },
-  "environment": {
-    "setting": "A gritty, dilapidated room. The wall behind is peeling, cracked, and textured, resembling an abandoned concrete building or a ruined police station.",
-    "background_elements": [
-      "Height chart on the wall.",
-      "The word 'POLCIE' written at the top left of the wall."
-    ]
-  }
-}
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

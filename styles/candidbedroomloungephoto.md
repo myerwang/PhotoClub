@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A candid, softly lit lifestyle photograph of a young woman lounging on a white bed in a minimal bedroom, shot vertically with a slightly wide lens from near her knees so her legs and oversized top dominate the foreground. She is lying on her back diagonally across the bed, wearing an oversized dark navy or black sweatshirt and very short light blue denim cutoff shorts with frayed hems, with bare legs visible in the foreground. Her arms are raised above and around her head in a relaxed, sleepy pose, one wrist bent loosely, and her face is mostly obscured by her arms and angle, giving an unposed, intimate feeling. Place the bed against a pale gray wall, with rumpled white bedding and large white pillows. On the left side near a window with sheer curtains, include a freestanding clothing rack holding exactly 8 visible hangers with neutral-toned clothes in black, white, beige, and gray, plus one blue garment draped over the top bar. On the right side behind the bed, include exactly 7 upright books lined on a narrow surface against the wall. Use natural daylight coming from the left window, soft shadows, muted cool tones, slight film-like grain, shallow depth of field, and a calm Japanese apartment aesthetic. Emphasize a relaxed weekend mood, understated realism, and the subtle sense of a presence caught in a private moment rather than direct eye contact.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

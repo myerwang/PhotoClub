@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A highly realistic, cinematic photograph of a {argument name="subject description" default="young Asian woman"} wearing {argument name="clothing" default="traditional black and white Hanfu"}, sitting at a dark wooden desk in a dimly lit traditional study. She holds a calligraphy brush in her right hand, poised over a blank scroll, while resting her chin on her left hand with a {argument name="expression" default="thoughtful and contemplative"} look directed toward a lattice window on the right. The background features a large wall hanging covered in {argument name="background calligraphy" default="traditional Chinese calligraphy"}. The scene is illuminated by {argument name="lighting style" default="dramatic cinematic lighting with warm and cool contrast"}, featuring a warm glow from a traditional paper lantern on the left and cool natural light streaming from the window. The desk is adorned with an inkstone, a blue and white porcelain brush holder, and a small potted plant, creating a rich, moody atmosphere with exquisite textures.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A bright, refreshing commercial photography shot of a {argument name="subject description" default="young handsome East Asian man with dark bangs"} wearing a {argument name="clothing" default="light blue crewneck sweater"}. He is smiling gently at the camera and holding up a clear plastic water bottle with condensation and a blue label that reads "{argument name="product name" default="POCARI SWEAT"}". The background is a soft-focus, airy room with light blue walls, framed pictures, a warm lamp, and a bright blue sky visible through a window on the left. In the bottom left corner, there is white overlay text that reads "{argument name="overlay text line 1" default="포카리 스웨트"}" above a second line reading "{argument name="overlay text line 2" default="이온을 채워, 순간을 살아"}", underlined by a dynamic white swoosh graphic. The lighting is soft, natural, and inviting, emphasizing a clean and hydrating aesthetic.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

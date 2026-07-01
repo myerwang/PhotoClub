@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A polished studio portrait of a glamorous pop-star-like woman from the chest up, centered against a smooth neutral gray backdrop. She has {argument name="hair color" default="jet black"} long loose wavy hair with a middle part, glossy shine, and soft volume falling over both shoulders. Her face is mostly hidden behind the ice cream cone she is holding up in front of her mouth and lower face, creating a playful fashion-editorial composition. She wears a white ribbed tank top with wide straps and a single visible sparkling stud earring. In her hand is 1 waffle cone topped with 1 large scoop of pink strawberry ice cream with dark red berry swirls and slight melting texture. Warm, flattering beauty lighting, soft shadows, realistic skin tones, high-end celebrity portrait photography, crisp focus on the hand, cone, hair, and shoulders, minimal background, subtly sensual and chic mood, vertical crop.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

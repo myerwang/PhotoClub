@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A photorealistic lifestyle portrait of a young woman seated outdoors in a lush sunlit garden, framed from about mid-thigh up in a vertical composition. She has {argument name="hair color" default="dark blonde"} shoulder-length to chest-length naturally wavy hair with a slightly tousled texture and a center part. Her face is fully obscured by a flat solid medium-tan rectangular censor block, centered over the face and extending from forehead to chin. She is wearing a {argument name="dress color" default="white"} sleeveless summer dress with thin spaghetti straps, a fitted bodice, and 2 front bow ties creating 2 teardrop-shaped cutouts down the center of the chest and upper torso. She wears 2 delicate gold necklaces: 1 short chain with tiny charms and 1 slightly longer chain with a small circular pendant. Her pose is relaxed and natural, sitting on a dark woven outdoor chair with her arms resting down in front of her lap, shoulders soft, body facing forward. The background is a richly detailed garden with dense green foliage, shrubs, and soft pale flowers, rendered with shallow depth of field and creamy bokeh. Bright natural daylight, soft summer atmosphere, realistic skin texture, high-end candid editorial photography, subtle highlights on hair, vibrant greens, clean exposure, sharp subject focus, casual luxury lifestyle aesthetic. Include a small white "Pollo.ai" watermark in the top-right corner.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

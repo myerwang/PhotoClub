@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A realistic, slightly grainy, low-lighting mugshot of a young woman with long, messy black hair, prominent cheekbones, and full lips. She has a small tattoo near her right eye and extensive, intricate mandala-style tattoos covering her neck, chest, and both hands/arms. She is wearing a simple black sleeveless top. She is holding up a rectangular white placard with blurred-out text, held with both hands showing long, manicured nails. The background is a plain white cinderblock wall with a height chart on the right side, showing numbers like 150, 160, and 170 in black stencil font. The overall aesthetic is gritty and raw, resembling a genuine police booking photograph.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

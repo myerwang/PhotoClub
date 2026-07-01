@@ -11,11 +11,7 @@ retrieved_at: 2026-06-19T06:34:49.525Z
 
 ## Source Prompt
 
-Use the uploaded portrait photo as the appearance reference for the person. Create a bright photorealistic outdoor portrait of a young woman lying on a red running track on a modern white arch pedestrian bridge. Ultra-wide low-angle selfie perspective, her arm reaching toward the camera in the foreground, relaxed pose, wired headphones around her neck, white sleeveless top, loose gray pants, black hair spread on the ground. Clean blue sky with soft white clouds, strong midday sunlight, crisp shadows, high clarity, fresh youthful mood, architectural symmetry, realistic skin texture, cinematic composition, 3:4 vertical image
-
-Negative Prompt:
-
-watermark, logo, text, caption, signature, AI label, extra fingers, deformed hands, distorted face, wrong identity, duplicate person, blurry face, low resolution, over-smoothed skin, plastic skin, unnatural anatomy, bad perspective, messy background, harsh artifacts, overexposure, underexposure
+Create a red runway editorial portrait using the selected person's identity. Use a saturated red runway or stage-like environment, fashion-show lighting, glossy floor reflections, dramatic editorial pose, and high-fashion photographic finish while preserving the exact face.
 
 ## Adaptation Log
 
@@ -24,15 +20,17 @@ watermark, logo, text, caption, signature, AI label, extra fingers, deformed han
 
 ## Visual Rules
 
-- 采用来源案例 420“Red Runway Portrait”明确给出的摄影或视觉处理、环境、材质和后期质感，不增加来源之外的风格元素。
+- Red runway editorial treatment: saturated red set or catwalk, glossy reflections, strong fashion lighting, polished editorial styling, and high-contrast photographic realism.
+- Do not replace the selected subject with a runway model template; preserve face identity and selected subject count.
 
 ## Composition
 
-- 采用来源提示词明确指定的景别、机位、人物动作和环境布局；人物属性、人数与组合由当前任务决定。
+- Use a full-body, three-quarter, or medium runway composition with the face unobstructed and large enough to identify.
+- Background runway audience or lights may be abstract and out of focus only.
 
 ## Lighting And Color
 
-- 采用来源提示词明确指定的照明方式、色彩关系、曝光和成像质感。
+- Saturated red palette, controlled highlights on fabric and floor, dramatic key light, clean shadows, and premium fashion editorial color grading.
 
 ## Subject Boundary
 

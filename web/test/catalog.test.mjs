@@ -66,6 +66,17 @@ test('production styles do not declare legacy pre-generated thumbnails', async (
   }
 });
 
+test('production style source prompts contain no fixed subject or face-obscuring cues', async () => {
+  const stylesDir = path.resolve('styles');
+  const styleFiles = (await readdir(stylesDir)).filter((fileName) => fileName.endsWith('.md'));
+  const forbidden = /\b(?:censor(?:ed)?|obscur(?:e|ed|ing)|blur(?:red)?|mosaic|redacted|face block|block over (?:the )?face|eyes?|nose|mouth|lips?|jawline|cheeks?|face shape|facial features?|skin tone|young|older|elderly|teenage?|middle-aged|East Asian|Asian|Japanese|Korean|Chinese|South Asian|Russian|woman|man|girl|boy|female|male|actor|actress|model|idol|alien)\b/iu;
+  for (const fileName of styleFiles) {
+    const markdown = await readFile(path.join(stylesDir, fileName), 'utf8');
+    const sourcePrompt = /## Source Prompt\n\n([\s\S]*?)(?=\n\n## |$)/u.exec(markdown)?.[1] ?? '';
+    assert.doesNotMatch(sourcePrompt, forbidden, fileName);
+  }
+});
+
 test('parses style frontmatter without thumbnail', () => {
   const style = parseStyleFrontmatter(`---\nstyle_id: sticker\nname: 贴纸\n---\n`, 'sticker.md');
   assert.deepEqual(style, { id: 'sticker', name: '贴纸' });

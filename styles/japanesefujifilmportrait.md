@@ -11,27 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-9:16 vertical — {argument name="film style" default="Japanese Fuji film style"} portrait, single subject
-
-Fujifilm analog aesthetic (Pro 400H / Superia feel), soft pastel tones, slight green-magenta shift, low contrast, gentle highlight roll-off, fine film grain, subtle halation
-
-early morning indoor setting near window, soft curtains, fresh daylight
-
-{argument name="subject" default="young Japanese female idol"}, natural minimal makeup, soft fresh skin texture
-
-outfit: oversized shirt with loose shorts, relaxed homewear style, non-revealing
-
-hair: slightly messy, natural volume, just-woke-up feeling
-
-pose: sitting on bed edge or by window, body slightly leaning forward, shoulders relaxed; one hand loosely holding a small flower or fabric, the other resting naturally
-
-expression: soft, slightly sleepy gaze, calm and natural
-
-lighting: {argument name="lighting" default="soft morning light"}, diffused, gentle shadows
-
-mood: quiet, fresh, intimate everyday moment
-
-quality: ultra-realistic, film grain, slight softness, natural imperfections
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

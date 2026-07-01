@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A photorealistic underwater portrait of a {argument name="subject description" default="young Asian woman"} holding her breath just below the surface. She has {argument name="hair style" default="long dark wavy hair"} floating weightlessly around her face and is wearing a {argument name="clothing" default="sheer white ruffled dress"}. She looks directly at the camera with slightly puffed cheeks and pursed lips. The scene is illuminated by bright sunlight filtering through the {argument name="environment" default="clear blue water"}, casting intricate, dappled caustic light patterns across her face, chest, and clothing. Small, delicate air bubbles float upward around her face, adding to the serene, ethereal atmosphere.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

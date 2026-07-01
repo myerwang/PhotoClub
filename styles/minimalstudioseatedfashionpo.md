@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A realistic indoor fashion portrait of a young East Asian woman seated on a simple black folding chair, framed from head to upper thighs in a vertical composition. She has dark brown to nearly black hair parted in the center and tied back into a low ponytail, with a few soft loose strands near the ears, and small delicate earrings. Her face is intentionally obscured and featureless, with no visible eyes, nose, or mouth detail. She wears a fitted ribbed zip-front crop top in {argument name="top color" default="deep chocolate brown"}, with a collar, three-quarter sleeves, and the zipper partially open to create a deep neckline, paired with high-waisted straight-leg pants in a matching {argument name="pants color" default="brown"}. Her body is angled slightly toward the camera with relaxed shoulders, hands resting together between her knees, conveying a calm casual studio pose. The background is a soft off-white draped fabric curtain with gentle folds, lit by diffused natural window light for a clean, minimalist studio look. Emphasize realistic skin texture, soft shadows, neutral warm tones, shallow depth of field, and polished high-end fashion photography styling.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

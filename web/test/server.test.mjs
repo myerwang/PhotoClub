@@ -618,6 +618,36 @@ test('generation accepts ordered style batches, deduplicates duplicate style ids
   assert.doesNotMatch(prompts[0], /custom_/);
 });
 
+test('generation removes stale outputs for the same profile and style before queuing new work', async (t) => {
+  const rootDir = await fixture();
+  const stale = path.join(rootDir, 'output', 'mama-film-oldhash-1.png');
+  const unrelatedStyle = path.join(rootDir, 'output', 'mama-sticker-oldhash-1.png');
+  const unrelatedProfile = path.join(rootDir, 'output', 'baba-film-oldhash-1.png');
+  await writeFile(stale, 'old film');
+  await writeFile(unrelatedStyle, 'old sticker');
+  await writeFile(unrelatedProfile, 'old baba');
+  const { app, base } = await running({
+    rootDir,
+    runTaskImpl: async ({ prompt }) => {
+      await writeGenerateOutputs(prompt);
+      return {};
+    },
+    syncStylePreviewImpl: async ({ styleId, outputPaths }) => ({ styleId, preview: `styles/previews/${styleId}.jpg`, sourcePath: outputPaths.at(-1) }),
+  });
+  t.after(() => app.close());
+  const owner = await acquire(base);
+  const response = await fetch(`${base}/api/jobs/generate`, {
+    method: 'POST',
+    headers: auth(owner),
+    body: JSON.stringify({ profileIds: ['mama'], styleIds: ['film'], formatId: 'jp_l', extraPrompt: '', quantity: 1 }),
+  });
+  assert.equal(response.status, 202);
+  await waitFor(() => app.queue.snapshot().jobs.every((job) => job.status === 'succeeded'), 'expected generation to finish');
+  await assert.rejects(access(stale), /ENOENT/);
+  await access(unrelatedStyle);
+  await access(unrelatedProfile);
+});
+
 test('generation resume only queues missing outputs and reports skipped completed work', async (t) => {
   const rootDir = await fixture();
   await writeFile(path.join(rootDir, 'styles/neon.md'), '---\nstyle_id: neon\nname: 霓虹\n---\n\n- Apply `system/rules/style_base.md`.\n');

@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A photorealistic selfie of a young Japanese woman standing on a sunny city street in {argument name="location" default="Shibuya, Japan"}. She has a soft smile, fair skin, light makeup, and {argument name="hair style" default="long wavy brown hair with see-through bangs"}. She is wearing a {argument name="clothing" default="white textured blouse"} with a delicate necklace and a beige shoulder bag strap visible. The background features a bustling urban environment with a crosswalk, pedestrians on the sidewalk, and a large white commercial building displaying the text {argument name="building text" default="MODI"} at the top along with a digital billboard. On the left side of the frame, a vertical street sign clearly displays the text {argument name="street sign text" default="渋谷区 神南一丁目 8"}. The image has a bright, natural daylight aesthetic typical of a casual social media photo.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

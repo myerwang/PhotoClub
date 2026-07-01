@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A moody minimalist portrait of a young man in a formal black suit, white dress shirt, and black tie, standing against a plain light beige wall in warm late-afternoon sunlight. He is shown from the chest up, slightly angled, with his face mostly obscured by shadow and framing, emphasizing the jawline, neck, ear, and tousled short black hair. In one hand he delicately holds exactly 1 long-stemmed red rose with 1 bloom and a few small green leaves, positioned beside his chest. Strong directional golden light from the left casts a crisp shadow of both the man and the rose onto the wall, creating a cinematic romantic atmosphere. Clean editorial photography, soft natural skin tones, high contrast between the dark suit and sunlit wall, shallow luxury fashion aesthetic, centered composition, realistic photo style.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

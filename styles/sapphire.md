@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T06:26:49.522Z
 
 ## Source Prompt
 
-Luxury Glam Beauty Portrait: Beautiful Black woman, youthful spirit, creamy vanilla, silk press, mahogany red, subtle confidence, textured fabric, sapphire blue, minimal jewelry, beachside breeze, lens flare effect, nostalgic, cinematic lens, symmetrical composition, soft focus, high fashion photography, monochromatic, dewy finish, mysterious tension, layered elements.
+奢华美妆与高时尚摄影，蓝宝石色、纹理织物和极简珠宝。 露润妆效、柔焦、怀旧电影镜头与层叠元素。 对称构图，海边微风塑造人物和织物。 柔和镜头光晕与单色调处理，营造神秘张力。
 
 ## Adaptation Log
 

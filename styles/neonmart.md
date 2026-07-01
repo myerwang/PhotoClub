@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T06:26:49.522Z
 
 ## Source Prompt
 
-35mm film photography with harsh convenience store fluorescent lighting mixed with colorful neon signs from outside, authentic film grain, high contrast, cinematic street editorial style, intimate medium shot, late-night convenience store atmosphere, realistic reflections on glass, natural skin texture, oversized white shirt, black mini skirt, messy high ponytail, seductive but grounded urban portrait energy, no watermark, no text.
+35mm 胶片颗粒、高反差和街头时尚编辑质感。 便利店玻璃反射与深夜都市氛围。 亲密中景，人物处于便利店环境。 刺眼荧光灯与室外彩色霓虹混合照明。
 
 ## Adaptation Log
 

@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A highly realistic editorial studio portrait of a {argument name="subject gender" default="woman"} in their late 30s with a naturally fit build, shown in a half-body composition at eye level. The subject stands facing the camera in a relaxed, confident posture with both hands tucked casually into pockets, wearing a dark charcoal tailored blazer over a muted olive-gray crew-neck t-shirt and dark trousers. The hair is {argument name="hair style" default="shoulder-length dark brown wavy hair with a natural side part"}, slightly tousled and softly framing the shoulders. Keep the expression calm, neutral, and self-assured. Use an 85mm portrait lens look at f/2.8 with the subject sharply in focus and the background softly blurred. Lighting is clean professional studio lighting with 1 softbox key light from the front, subtle fill to reduce harsh shadows, and 1 gentle rim light around the hair and shoulders. The background is a seamless studio backdrop with a soft warm beige-to-light taupe gradient, minimal texture, and no distractions. Color grading should be natural and balanced, with realistic skin tones, soft contrast, and no heavy retouching or filters. The overall mood is understated, modern, polished, and premium, like a fashion or corporate editorial portrait. Ultra-detailed, photorealistic, 8k, no noise, no motion blur, no distortions, no props, no jewelry, no text.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

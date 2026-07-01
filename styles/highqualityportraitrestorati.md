@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-Edit this photo into a professional {argument name="portrait style" default="portrait"} of very high quality and Color, comparable to the results of {argument name="camera model" default="Canon EOS R5"}. Create like a recent photo, with great clarity and no noise. Produce razor-sharp photos. Full HD 32k
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

@@ -11,12 +11,7 @@ retrieved_at: 2026-06-19T06:31:22.135Z
 
 ## Source Prompt
 
-Upload one portrait as the identity reference. Use it only for the subject’s facial identity, face shape, hairstyle, hair color, skin tone, and natural body proportions. Do not copy the original portrait’s clothes, background, pose, lighting, or image quality.
-
-Create a hyper-realistic outdoor convex traffic mirror selfie, 9:16 vertical composition. The subject stands in front of a large round roadside safety mirror with a red rim, taking a flash selfie with a decorated phone case, phone partially covering the face. Use the uploaded portrait only for identity and hairstyle. Keep a casual youthful outfit: dark oversized zip hoodie, cropped white graphic tee, loose jeans, white sneakers. Rainy dusk street intersection background, wet asphalt, zebra crossing, trees, soft blue-gray sky, faint streetlights, one blurred passing scooter, dirty mirror surface with dust and water spots, strong camera flash glare, realistic fisheye distortion, candid smartphone snapshot, natural skin texture, real-life street photography, no watermark.
-
-Negative Prompt:
-anime, cartoon, CGI, 3D render, doll face, plastic skin, over-smoothed skin, fake eyes, bad anatomy, distorted hands, extra fingers, broken phone, duplicate person, messy face, unreadable facial features, overexposed face, low resolution, heavy beauty filter, studio lighting, clean perfect mirror, text, logo, watermark, UI elements, poster design, artificial background
+采用source prompt明确给出的摄影或视觉处理、环境、材质和后期质感，不增加来源之外的风格元素。 Use the source-defined 景别、机位、人物动作和环境布局；人物属性、人数与组合由当前任务决定。 Use the source-defined 照明方式、色彩关系、曝光和成像质感。
 
 ## Adaptation Log
 

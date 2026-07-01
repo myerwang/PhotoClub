@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A photorealistic upper-body portrait of a {argument name="character type" default="Japanese high school girl"} standing outdoors in bright natural sunlight, framed from mid-torso up in a vertical composition. She has long, straight {argument name="hair color" default="dark brown"} hair with a glossy sheen, a clean center part, and soft strands catching the light. Her pose is calm and slightly angled to the side, with her head turned subtly away from the camera for a candid fashion-portrait feel. She wears a crisp white short-sleeve school shirt and a navy blue striped necktie, with a detailed embroidered crest patch on the left chest pocket featuring a crown and heraldic shield. The background is a shallow-depth-of-field scene of vivid red shrine or temple architecture with bold vertical pillars and hints of blue and gold decorative elements, creating strong color contrast against the white shirt and dark hair. Emphasize realistic skin, natural fabric folds, high-end DSLR portrait photography, soft bokeh, sharp focus on hair and clothing, polished commercial beauty styling, and an elegant, refined mood.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A hyper-realistic full-body studio portrait of a disturbing humanoid alien standing alone against a dark, smoky blue-black backdrop. The creature is extremely tall and emaciated, with elongated limbs, a narrow waist, long thin fingers, and oversized bare feet planted on a dim studio floor. Its skin is smooth but leathery and subtly wrinkled, colored deep charcoal blue with cold gray highlights, showing sharply defined ribs, sternum, collarbones, tendons, and stringy musculature across the chest, abdomen, shoulders, and neck. The torso is hairless and gaunt, with an eerie anatomical realism that feels biologically plausible but unsettling. The head is bald, enlarged, and slightly bulbous with a classic extraterrestrial silhouette, attached to an unnaturally long neck; keep the face obscure, unreadable, and deeply uncanny rather than expressive. Pose the alien front-facing with a slight three-quarter angle, arms hanging loosely at its sides, posture upright but subtly predatory, centered in frame from head to feet. Use low-key cinematic lighting with a faint cool rim light and soft overhead illumination that sculpts every crease and contour while keeping the overall scene dark, moody, and oppressive. Desaturated palette, ultra-detailed skin texture, photoreal creature design, sharp focus, high contrast, ominous atmosphere, no clothing, no props, no environment details beyond the shadowy studio background.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T06:26:49.522Z
 
 ## Source Prompt
 
-9:16 vertical candid portrait of a young Korean woman glancing back over her shoulder in a dimly lit bedroom. She wears a loose off-shoulder cream knit sweater with a thin strap camisole underneath. Hair pulled up in a messy bun with loose strands framing her face. Warm amber ambient lighting from a single bedside lamp, slightly cluttered room background with a wall clock, vanity shelf, and scattered items creating a lived-in feel. Soft focus on the background, sharp focus on the face and shoulder. Natural skin texture with subtle warm glow, slightly parted lips, gentle eye contact with the camera. Vintage film grain, muted warm tones, lowered contrast, slight vignette. Intimate candid photography mood, Korean idol photobook aesthetic, no watermark, no text.
+生活化卧室背景、复古胶片颗粒与低反差暖调。 背景柔焦，人物皮肤保持自然质感。 回眸姿态，脸部和肩部清晰，背景虚化。 单一床头灯形成温暖琥珀环境光，并带轻微暗角。
 
 ## Adaptation Log
 

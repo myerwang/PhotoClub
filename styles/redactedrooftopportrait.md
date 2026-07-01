@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A cinematic photorealistic rooftop portrait at golden hour of an older man standing centered and facing the camera, with his face fully obscured by a large vertical rectangular censor block in a muted brown tone. Show only the visible parts of him clearly: short dense tightly curled gray hair with silver highlights, both ears visible, a slender aged neck, and the upper torso in a charcoal gray blazer over an open-collar off-white dress shirt with no tie. Compose the image in a vertical portrait crop from mid-chest upward. Place him on a realistic New York City rooftop with exact visible details including 1 weathered HVAC unit on the left foreground, 1 cylindrical rooftop water tower on the right midground, 2 prominent Art Deco skyscrapers in the background resembling the Empire State Building on the left and the Chrysler Building on the right, plus low brick buildings, rooftop pipes, vents, railings, and soft atmospheric haze. Use warm sunset lighting with orange-pink sky tones, subtle rim light on the ears and hair, shallow depth of field on the skyline, and highly detailed textures in the suit fabric, rooftop concrete, metal machinery, and curly hair. The overall mood should feel mysterious, editorial, and slightly surreal, like an identity-redacted magazine cover photo.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-Using the provided reference image, keep the same person and the same blue polo shirt, but transform the casual poolside selfie into a clean professional studio head-and-shoulders portrait. Remove the entire outdoor resort background and replace it with a solid warm orange backdrop. Reframe the shot so the subject is centered, facing the camera straight-on, cropped from mid-chest upward, with even soft studio lighting and a sharp, polished photo quality. Eliminate the selfie feel, background distractions, and other people, and add a small white four-point sparkle icon in the bottom-right corner.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A cinematic, moody photograph of a young Asian woman looking back over her shoulder at the viewer on a rainy night in a bustling {argument name="city setting" default="Tokyo"} street. She has wet, stringy black hair plastered to her face and a {argument name="atmosphere" default="melancholic"} expression, wearing a loose, oversized greyish-green jacket. The street is wet, reflecting the blurred, glowing neon signs and traffic lights of the city. In the background, crowds of pedestrians hold umbrellas. Parked on the wet asphalt to her left is a {argument name="car model" default="white vintage Toyota Levin"} hatchback with its red taillights illuminated and a Japanese license plate. On the top left side of the image, there is elegant vertical Japanese text that reads "{argument name="main text" default="雨音と歩く"}" in a large serif font, with smaller vertical text beside it reading "{argument name="subtext" default="都会の夜に溶けていく"}". The overall aesthetic is atmospheric, photorealistic, and cinematic, capturing a quiet, introspective moment amidst the urban chaos.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A cinematic candid photo of a {argument name="person" default="young woman"} standing in a wet coastal roadside turnout on an overcast day, viewed from behind and slightly to the side as she turns her head back toward the camera. She has dark messy hair tied in a loose bun with windblown strands, and her face is softly obscured and indistinct. She wears 2 visible clothing pieces: a worn tan-brown canvas jacket and medium-blue jeans. Her posture is relaxed with one hand near or in a pocket. The setting is a moody ocean cliff highway overlook with dark rocky mountains running along the left side, pale gray sea stretching into the distance on the right, and a cloudy washed-out sky. Include 1 parked light-colored late-1980s or early-1990s sedan on the right edge of the frame, rear end facing the viewer, and 1 large rock barrier near the overlook. The asphalt is dark and damp with faint parking lines, suggesting recent rain. Use natural light, muted cool tones, slight film grain, soft focus, shallow haze, and a nostalgic 35mm road-trip photography aesthetic.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

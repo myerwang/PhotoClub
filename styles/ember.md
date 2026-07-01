@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T06:26:49.522Z
 
 ## Source Prompt
 
-Generate a cinematic minimal portrait of a solitary man standing in an intense orange-to-red gradient environment with strong silhouette lighting, deep shadow contrast, a reflective glossy floor, and a symmetrical composition. Keep the scene stripped down and controlled, with one dominant subject, clean edges, minimal visual noise, and a fashion-editorial sense of drama. The result should feel premium, graphic, and modern rather than busy or over-rendered.
+橙红渐变环境、强剪影与极简时尚编辑质感。 画面边缘干净，视觉噪声极少。 单一主导人物、对称构图与反光地面。 强轮廓光、深阴影反差。
 
 ## Adaptation Log
 

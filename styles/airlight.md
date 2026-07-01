@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T06:26:49.522Z
 
 ## Source Prompt
 
-Analog 35mm film photography, soft airy Japanese-style aesthetic, gentle diffused natural window light, slight overexposure, pastel tones, low contrast, soft highlights, minimal indoor setting near a window with white curtains, clean light-colored wall, natural composition, eye-level, slightly closer full-body framing (mid-thigh to head), young East Asian woman, natural minimal makeup, soft realistic skin texture, long slightly messy dark hair, oversized white button-up shirt, light casual shorts, barefoot, simple and relaxed styling, standing naturally with relaxed posture, arms loosely at sides, facing camera, gentle soft smile, subtle stillness, focus on light, air, and quiet everyday mood, soft film grain, dreamy and understated atmosphere.
+柔和通透的日系 35mm 胶片质感，略过曝、粉彩低反差。 极简室内、白窗帘和浅色墙面，气氛安静克制。 视平线拍摄，取大腿以上至头部的接近全身景别，自然站姿。 窗边自然光柔和扩散，亮部柔顺并带细腻胶片颗粒。
 
 ## Adaptation Log
 

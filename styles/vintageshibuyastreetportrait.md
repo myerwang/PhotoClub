@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T11:04:59.421Z
 
 ## Source Prompt
 
-A candid street-fashion portrait of a young woman standing at a busy Tokyo crosswalk in daylight, framed from the upper torso up and turned slightly away from the camera so her bare shoulder is prominent. She has a short messy bob haircut in {argument name="hair color" default="platinum blonde"}, soft wispy texture, and a delicate build. She wears an airy off-shoulder blouse in {argument name="clothing color" default="white"}, made of thin semi-sheer fabric with loose drape and a romantic, lightweight feel. Place her in the foreground left-of-center, with a shallow depth of field and a crowded urban background full of pedestrians crossing the street. Behind her, include a large curved glass building with the visible sign {argument name="background sign" default="TSUTAYA"}, evoking Shibuya. Use a warm vintage film aesthetic with faded colors, noticeable grain, slight blur, soft sunlight, muted contrast, and a nostalgic analog snapshot mood. The overall tone should feel stylish, spontaneous, and cinematic, like a fashion photo captured in the middle of a bustling city.
+采用来源 source record明确给出的摄影媒介、场景、材质与后期处理，不添加来源外的风格元素。 Use the source-defined 景别、机位、人物动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 光源、色温、曝光、色彩关系和相机或胶片质感。
 
 ## Adaptation Log
 

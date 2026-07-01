@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T10:51:27.819Z
 
 ## Source Prompt
 
-Create a fashion magazine editorial spread. Left page is a full bleed portrait photograph of a model in draped linen layers on a sun-bleached terrace. Right page has the feature title THE UNHURRIED SILHOUETTE in a giant condensed serif, small byline by R. CALLEJA, photography by S. MORI, a two paragraph lede in sans serif body. No real publication branding, no watermark.
+采用来源卡片 33“Fashion magazine editorial spread”明确给出的摄影媒介、环境质感、服装语言和后期处理。 Use the source-defined 景别、机位、动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 自然光、环境光、混合色温、曝光与胶片或手机成像质感。
 
 ## Adaptation Log
 

@@ -11,7 +11,7 @@ retrieved_at: 2026-06-19T10:51:27.819Z
 
 ## Source Prompt
 
-Analog 35mm portrait, rainy afternoon in an Istanbul café along a narrow Beyoğlu side street, warm amber pendant light from inside mixed with cool bluish wet daylight through fogged windows, soft halation around the bulbs, early-30s woman with delicate angular features, natural freckles across the bridge of her nose, loose auburn hair tucked behind one ear with a few strands sticking to her temple from humidity, wearing a cream wool turtleneck and a thin silver chain, cupping a small tulip-shaped tea glass with both hands, steam rising in front of her face, condensation on the window blurring the street behind her, shallow depth of field, muted earth-tone color grading, no oversharpening, no beauty retouch, no text
+采用来源卡片 2“Monsoon Istanbul café portrait”明确给出的摄影媒介、环境质感、服装语言和后期处理。 Use the source-defined 景别、机位、动作和环境层次；人物属性、人数与组合由当前任务决定。 Use the source-defined 自然光、环境光、混合色温、曝光与胶片或手机成像质感。
 
 ## Adaptation Log
 
